@@ -43,10 +43,10 @@ AI executor - dynamic prompt management and execution tool that brings the power
 
 ```bash
 # Install with uv (recommended)
-uv tool install aix --from git+https://github.com/bhadzhiev/aix.git
+uv tool install aix --from git+https://github.com/bhadzhiev/prompt.git
 
 # Or install with pip
-pip install git+https://github.com/bhadzhiev/aix.git
+pip install git+https://github.com/bhadzhiev/prompt.git
 ```
 
 ### Basic Usage
