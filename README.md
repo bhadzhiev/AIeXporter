@@ -6,7 +6,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![AI](https://img.shields.io/badge/Powered%20by-AI%20(Obviously)-ff69b4.svg)](https://en.wikipedia.org/wiki/Artificial_intelligence)
 
-## 🤔 What is this sorcery?
+## What is this sorcery?
 
 PromptConsole is like having a really smart intern who lives in your terminal and can:
 - **Read your mind** (via prompts)
@@ -14,7 +14,7 @@ PromptConsole is like having a really smart intern who lives in your terminal an
 - **Talk to AI gods** (OpenAI, Anthropic, OpenRouter)
 - **Never asks for coffee breaks** (because it's code)
 
-## 🚀 Why should I care?
+## Why should I care?
 
 Because typing the same prompts into ChatGPT over and over is so 2023. Now you can:
 
@@ -70,7 +70,7 @@ aix run roast --param language=python --param code="print('hello world')" --dry-
 aix run roast --param language=python --param code="print('hello world')" --execute
 ```
 
-## 🎨 Features that will make you go "Ooooh"
+## Features that will make you go "Ooooh"
 
 | Feature | Description | Why it's cool |
 |---------|-------------|---------------|
@@ -81,7 +81,7 @@ aix run roast --param language=python --param code="print('hello world')" --exec
 | **📁 File Storage** | YAML/JSON prompts | Git-friendly templates |
 | **🎯 Auto-complete** | Tab completion everywhere | Because typing is hard |
 
-## 🎭 Real-world examples (a.k.a. "Show me the money")
+## Real-world examples (a.k.a. "Show me the money")
 
 ### The "I'm too lazy to write commit messages" prompt
 
@@ -113,10 +113,10 @@ aix create roast "Roast this {language} code:\n\n{code}\n\nBe savage but helpful
 aix create sys-report "Generate a system status report:\n\n- Host: $(hostname)\n- User: $(whoami)\n- Uptime: $(uptime)\n- Disk: $(df -h /)\n- Memory: $(free -h)\n- Git status: $(git status --porcelain | wc -l) modified files\n\nMake it sound professional but slightly snarky."
 
 # Then:
-aix run sys-report --enable-commands --execute
+aix run sys-report --enable-commands --dry-run
 ```
 
-## 📚 Documentation (a.k.a. "The boring but necessary stuff")
+## Documentation (a.k.a. "The boring but necessary stuff")
 
 We've hidden all the boring details in separate files because READMEs should be fun:
 
@@ -142,7 +142,7 @@ aix config --set auto_upgrade true
 aix config --set editor nano  # or vim, or code, or butterfly
 ```
 
-## 🤯 Advanced Usage (a.k.a. "Look mom, I'm a hacker")
+## Advanced Usage (a.k.a. "Look mom, I'm a hacker")
 
 ### Streaming responses (for instant gratification)
 ```bash
@@ -226,7 +226,7 @@ If this tool saves you from writing one more commit message manually, consider b
 
 MIT License - do whatever you want, just don't blame me when your AI-generated commit messages confuse your team.
 
-## 🤝 Contributing
+## Contributing
 
 Found a bug? Want to add a feature? Have a better joke for the README?
 
