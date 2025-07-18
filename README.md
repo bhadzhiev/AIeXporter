@@ -1,279 +1,245 @@
-# aix
+# 🎭 PromptConsole (a.k.a. "aix")
 
-AI executor - dynamic prompt management and execution tool that brings the power of AI to your command line. Create, organize, and execute dynamic prompts with built-in API integration and command execution capabilities.
+> *Your AI butler that lives in the terminal and doesn't judge your code*
 
-## Features
+[![Python](https://img.shields.io/badge/Python-3.8%2B-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![AI](https://img.shields.io/badge/Powered%20by-AI%20(Obviously)-ff69b4.svg)](https://en.wikipedia.org/wiki/Artificial_intelligence)
 
-### Prompt Management
-- Create reusable prompt templates with `{variable}` syntax
-- Save prompts in JSON or YAML format
-- Organize prompts with tags and descriptions
-- Store prompts in `~/.prompts` directory
+## 🤔 What is this sorcery?
 
-### AI Integration
-- Execute prompts via multiple AI providers:
-  - **OpenRouter** - Access to 100+ models through one API
-  - **OpenAI** - GPT models (GPT-4, GPT-3.5-turbo, etc.)
-  - **Anthropic** - Claude models (Opus, Sonnet, Haiku)
-- Streaming and non-streaming responses
-- Token usage tracking and cost estimation
-- Configurable models and parameters
+PromptConsole is like having a really smart intern who lives in your terminal and can:
+- **Read your mind** (via prompts)
+- **Execute your commands** (safely!)
+- **Talk to AI gods** (OpenAI, Anthropic, OpenRouter)
+- **Never asks for coffee breaks** (because it's code)
 
-### Dynamic Command Execution
-- Embed shell commands directly in prompts
-- Multiple syntax options: `$(git status)`, `{cmd:ls}`, `{exec:pwd}`
-- Security-first approach with allowlisted commands
-- Real-time system information integration
+## 🚀 Why should I care?
 
-### Organization & Management
-- List all saved prompts with details
-- Search and filter capabilities
-- Delete unwanted prompts
-- Export/import prompt collections
-
-### Configuration
-- Secure API key management
-- Configurable storage location
-- Default providers and models
-- Customizable settings
-
-## Quick Start
-
-### Installation
+Because typing the same prompts into ChatGPT over and over is so 2023. Now you can:
 
 ```bash
-# Install with uv (recommended)
+# Instead of copy-pasting into a browser...
+aix run code-review --param code="def add(a,b): return a+b" --execute
+
+# Instead of manually writing commit messages...
+aix run commit-msg --enable-commands --execute
+
+# Instead of explaining your code to rubber ducks...
+aix run explain-code --param file="main.py" --execute
+```
+
+## 🎯 Quick Start (a.k.a. "I have 5 minutes")
+
+### Step 1: Install (Choose your fighter)
+
+```bash
+# Option A: The Cool Kid Way (uv)
 uv tool install aix --from git+https://github.com/bhadzhiev/prompt.git
 
-# Or install with pip
+# Option B: The "I still use pip" way
 pip install git+https://github.com/bhadzhiev/prompt.git
+
+# Option C: The "I like to suffer" way
+# (clone, install deps, etc... see [Installation Guide](doc/INSTALLATION.md))
 ```
 
-### Basic Usage
+### Step 2: Get an API Key (a.k.a. "Pay the AI tax")
 
 ```bash
-# Create your first prompt
-aix create "code-review" "Please review this {language} code: {code}" --desc "Code review template"
-
-# List all prompts
-aix list
-
-# Run a prompt with variables
-aix run code-review --param language=Python --param code="print('hello')"
-
-# Execute via AI (requires API key)
-aix run code-review --param language=Python --param code="print('hello')" --execute
-```
-
-## Documentation
-
-### Setting Up API Keys
-
-Choose your preferred AI provider and set up the API key:
-
-```bash
-# OpenRouter (recommended - access to 100+ models)
+# OpenRouter = 100+ models, free tier available
 aix api-key openrouter
 
-# OpenAI
+# OpenAI = Premium experience, costs money
 aix api-key openai
 
-# Anthropic
+# Anthropic = Claude, also costs money
 aix api-key anthropic
 ```
 
-**New to AI?** Check out our [OpenRouter Guide](OPENROUTER.md) for free models and setup instructions!
-
-### Creating Dynamic Prompts
-
-Create prompts that automatically include system information:
+### Step 3: Actually use it
 
 ```bash
-aix create "system-analysis" "Analyze this development environment:
-- Current user: $(whoami)
-- Working directory: $(pwd)
-- Git status: $(git status --porcelain)
-- Recent commits: {cmd:git log --oneline -5}
-- Python version: {exec:python --version}
+# Create a prompt template
+aix create roast "Roast this {language} code mercilessly:\n{code}"
 
-Suggestions for {project_type} development?"
+# Run it (dry run first because we're cowards)
+aix run roast --param language=python --param code="print('hello world')" --dry-run
+
+# Run it for real (brace yourself)
+aix run roast --param language=python --param code="print('hello world')" --execute
 ```
 
-### Running Dynamic Prompts
+## 🎨 Features that will make you go "Ooooh"
+
+| Feature | Description | Why it's cool |
+|---------|-------------|---------------|
+| **🎪 Dynamic Templates** | `{variables}` + `$(commands)` | Your prompts can now read your system |
+| **🤖 Multi-AI Support** | OpenRouter, OpenAI, Anthropic | When one AI is down, use another |
+| **🛡️ Safety First** | Allowlisted commands only | No `rm -rf /` accidents |
+| **🔄 Auto-upgrade** | Self-updating tool | Future-you will thank present-you |
+| **📁 File Storage** | YAML/JSON prompts | Git-friendly templates |
+| **🎯 Auto-complete** | Tab completion everywhere | Because typing is hard |
+
+## 🎭 Real-world examples (a.k.a. "Show me the money")
+
+### The "I'm too lazy to write commit messages" prompt
 
 ```bash
-# Enable command execution
-aix run system-analysis --param project_type="web app" --enable-commands --dry-run
+aix create commit "Write a commit message:\n\nChanges:\n$(git diff --staged)\n\nBe concise, follow conventional commits."
 
-# With specific provider and model
-aix run system-analysis --param project_type="API" --enable-commands --execute --provider openai --model gpt-4
-```
-
-## Command Reference
-
-### Core Commands
-
-| Command | Description | Example |
-|---------|-------------|---------|
-| `create` | Create a new prompt template | `aix create "name" "template"` |
-| `list` | List all saved prompts | `aix list` |
-| `show` | Show detailed prompt information | `aix show prompt-name` |
-| `delete` | Delete a prompt | `aix delete prompt-name` |
-| `run` | Execute a prompt | `aix run prompt-name --execute` |
-
-### Configuration Commands
-
-| Command | Description | Example |
-|---------|-------------|---------|
-| `config` | Manage settings | `aix config --list` |
-| `api-key` | Manage API keys | `aix api-key openrouter` |
-
-### Command Utilities
-
-| Command | Description | Example |
-|---------|-------------|---------|
-| `cmd test` | Test command execution | `aix cmd test "git status"` |
-| `cmd list` | Show allowed commands | `aix cmd list` |
-| `cmd template-test` | Test template with commands | `aix cmd template-test "Hello $(whoami)"` |
-| `upgrade` | Upgrade aix to latest version | `aix upgrade` |
-
-### Run Command Options
-
-| Option | Description | Example |
-|--------|-------------|---------|
-| `--param` | Set template variables | `--param key=value` |
-| `--execute` | Execute via AI API | `--execute` |
-| `--provider` | Choose AI provider | `--provider openai` |
-| `--model` | Specify model | `--model gpt-4` |
-| `--stream` | Stream response | `--stream` |
-| `--enable-commands` | Enable command execution | `--enable-commands` |
-| `--dry-run` | Preview without execution | `--dry-run` |
-| `--output` | Save to file | `--output result.txt` |
-
-## Security
-
-### Command Execution Security
-- **Allowlisted Commands**: Only predefined safe commands are allowed
-- **Timeout Protection**: Commands automatically timeout after 30 seconds
-- **Shell Injection Protection**: Safe command parsing and execution
-- **User Control**: Command execution is opt-in via `--enable-commands`
-
-### API Key Security
-- Keys are stored securely in local configuration
-- Masked display in configuration listings
-- Per-provider key management
-
-## File Structure
-
-```
-~/.prompts/
-├── config.json          # Configuration and API keys
-├── my-prompt.yaml       # Individual prompt files
-├── code-review.json     # Prompts can be JSON or YAML
-└── ...
-```
-
-## Supported Models
-
-### OpenRouter (100+ models available)
-- `meta-llama/llama-3.2-3b-instruct:free` (default, free)
-- `meta-llama/llama-3.1-70b-instruct`
-- `anthropic/claude-3-sonnet`
-- `openai/gpt-4`
-- `mistralai/mistral-7b-instruct:free`
-
-### OpenAI
-- `gpt-4` / `gpt-4-turbo`
-- `gpt-3.5-turbo` (default)
-
-### Anthropic
-- `claude-3-opus-20240229`
-- `claude-3-sonnet-20240229`
-- `claude-3-haiku-20240307` (default)
-
-## Examples
-
-### Code Review
-```bash
-# Create
-aix create "review" "Review this {lang} code:\n\n{code}\n\nFocus: bugs, style, performance"
-
-# Use (dry run to preview)
-aix run review --param lang=Python --param code="def fact(n): return 1 if n<=1 else n*fact(n-1)" --dry-run
-
-# Execute with AI (requires API key)
-aix run review --param lang=Python --param code="def fact(n): return 1 if n<=1 else n*fact(n-1)" --execute
-```
-
-### Git Helper
-```bash
-# Create
-aix create "commit" "Write commit message:\n\nChanges:\n$(git diff --staged)\n\nFollow conventional commits."
-
-# Use (dry run to preview)
-aix run commit --enable-commands --dry-run
-
-# Execute with AI (requires API key)
+# Then just run:
 aix run commit --enable-commands --execute
 ```
 
-### Documentation
+### The "Explain this mess" prompt
+
 ```bash
-# Create
-aix create "docs" "Document {lang} {type}:\n\nFile: {file}\nCode: {code}\n\nInclude: description, params, examples"
+aix create explain "Explain this {language} code like I'm 5:\n\n{code}\n\nFocus on:\n- What it does\n- Why it might exist\n- Potential improvements"
 
-# Use (dry run to preview)
-aix run docs --param lang=Python --param type=function --param file=utils.py --param code="def load_data(path): ..." --dry-run
-
-# Execute with AI (requires API key)
-aix run docs --param lang=Python --param type=function --param file=utils.py --param code="def load_data(path): ..." --execute
+# Usage:
+aix run explain --param language=python --param code="$(cat main.py)" --execute
 ```
 
-## Configuration
+### The "Roast my code" prompt
 
-### Default Settings
 ```bash
-# View current configuration
+aix create roast "Roast this {language} code:\n\n{code}\n\nBe savage but helpful. Include:\n- Style violations\n- Performance issues\n- Why the junior dev who wrote this should feel bad"
+```
+
+### The "System status report" prompt
+
+```bash
+aix create sys-report "Generate a system status report:\n\n- Host: $(hostname)\n- User: $(whoami)\n- Uptime: $(uptime)\n- Disk: $(df -h /)\n- Memory: $(free -h)\n- Git status: $(git status --porcelain | wc -l) modified files\n\nMake it sound professional but slightly snarky."
+
+# Then:
+aix run sys-report --enable-commands --execute
+```
+
+## 📚 Documentation (a.k.a. "The boring but necessary stuff")
+
+We've hidden all the boring details in separate files because READMEs should be fun:
+
+- **[Installation Guide](doc/INSTALLATION.md)** - For when `pip install` isn't working
+- **[Usage Guide](doc/USAGE.md)** - For when you want to do more than just `aix --help`
+- **[Template Guide](doc/TEMPLATES.md)** - For when you want to become a prompt wizard
+- **[API Providers](doc/API_PROVIDERS.md)** - For when you want to know which AI to bribe
+- **[Command Reference](doc/COMMANDS.md)** - For when you forget what `aix run --param` does
+
+## 🛠️ Configuration (a.k.a. "Making it yours")
+
+```bash
+# Check what you've broken
 aix config --list
 
-# Set default provider
-aix config default_provider openrouter
+# Set your favorite AI overlord
+aix config --set default_provider openrouter
 
-# Set default models
-aix config default_model "meta-llama/llama-3.1-70b-instruct"
-aix config openai_default_model "gpt-4"
+# Make it always upgrade (because updates are cool)
+aix config --set auto_upgrade true
 
-# Configure generation parameters
-aix config temperature 0.8
-aix config max_tokens 2048
+# Set your editor (vim vs emacs wars incoming)
+aix config --set editor nano  # or vim, or code, or butterfly
 ```
 
-## Contributing
+## 🤯 Advanced Usage (a.k.a. "Look mom, I'm a hacker")
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+### Streaming responses (for instant gratification)
+```bash
+aix run my-prompt --stream --execute
+```
 
-## License
+### Custom models (for the connoisseurs)
+```bash
+aix run my-prompt --provider openai --model gpt-4 --execute
+```
 
-MIT
+### Output to file (because copy-paste is so 2022)
+```bash
+aix run my-prompt --output genius-idea.txt --execute
+```
 
-## Support
+### Multiple parameters (the more the merrier)
+```bash
+aix run complex-prompt --param lang=python --param style=pep8 --param complexity=overkill --execute
+```
 
-If you encounter any issues or have questions:
-1. Check the documentation above
-2. Test commands with `aix cmd test "your-command"`
-3. View configuration with `aix config --list`
-4. Create an issue on GitHub
+## 🐛 Troubleshooting (a.k.a. "It doesn't work!")
 
----
+### Common Issues and Solutions
 
-**Buy me a coffee** ☕
+| Problem | Solution |
+|---------|----------|
+| `aix: command not found` | Try `python -m promptconsole.cli --help` |
+| `No API key found` | Run `aix api-key openrouter` |
+| `Command not allowed` | Add `--enable-commands` to your run command |
+| `Upgrade failed` | Run `uv tool install aix --force --from git+https://github.com/bhadzhiev/prompt.git` |
+| `It still doesn't work` | Have you tried turning it off and on again? |
 
-If you find this tool useful, you can support development by buying me a coffee:
+### Getting Help
+
+```bash
+# The magic help command
+aix --help
+
+# Command-specific help
+aix run --help
+aix create --help
+
+# If all else fails, there's always Stack Overflow
+```
+
+## 🎪 Examples Gallery
+
+### 1. The "I'm a DevOps engineer" prompt
+```bash
+aix create deployment "Create a deployment script for {app_name}:\n\nApp type: {app_type}\nEnvironment: {environment}\nCurrent branch: $(git branch --show-current)\nLast commit: $(git log -1 --pretty=%s)\n\nInclude:\n- Docker setup\n- Environment variables\n- Health checks\n- Rollback strategy"
+```
+
+### 2. The "I need to sound smart in meetings" prompt
+```bash
+aix create meeting-prep "Prepare talking points for meeting about {topic}:\n\nContext:\n$(git log --oneline -10)\n$(find . -name "*.py" -mtime -7 | head -5)\n\nMake me sound like I know what I'm doing."
+```
+
+### 3. The "Generate excuses" prompt
+```bash
+aix create excuse "Generate a technical excuse for why {feature} is delayed:\n\nCurrent blocker: {blocker}\nTeam size: $(whoami) # it's just me\nDeadline: {deadline}\n\nMake it sound technical but not my fault."
+```
+
+## ☕ Buy Me a Coffee
+
+If this tool saves you from writing one more commit message manually, consider buying me a coffee:
 
 **Revolut**: @bozhide29n
 
-Thank you for your support!
+*Every coffee helps me write more sarcastic error messages.*
+
+## 🏆 Testimonials
+
+> "I used to spend hours writing commit messages. Now I spend hours debugging why the AI's commit messages don't make sense." - *A satisfied user*
+
+> "It's like having a junior developer who never sleeps and doesn't complain about my code style." - *Tech Lead*
+
+> "The auto-upgrade feature means I never have to manually update tools again. My laziness has reached new heights." - *DevOps Engineer*
+
+## 📝 License
+
+MIT License - do whatever you want, just don't blame me when your AI-generated commit messages confuse your team.
+
+## 🤝 Contributing
+
+Found a bug? Want to add a feature? Have a better joke for the README?
+
+1. Fork the repo
+2. Create a feature branch
+3. Make your changes
+4. Test it (please)
+5. Submit a PR
+
+Bonus points if your commit messages are generated by this tool.
 
 ---
 
-**Made for developers who love automation and AI**
+**Made with ❤️ by someone who got tired of copy-pasting prompts into ChatGPT**
+
+*Now stop reading and go automate something!*
