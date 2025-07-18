@@ -1,9 +1,63 @@
 {
   "dependencies": [
     {
+      "name": "black>=23.0.0",
+      "type": "devenv"
+    },
+    {
+      "name": "flake8>=6.0.0",
+      "type": "devenv"
+    },
+    {
+      "name": "isort>=5.12.0",
+      "type": "devenv"
+    },
+    {
+      "name": "mypy>=1.5.0",
+      "type": "devenv"
+    },
+    {
+      "name": "pre-commit>=3.3.0",
+      "type": "devenv"
+    },
+    {
       "name": "projen",
       "version": "0.91.5",
       "type": "devenv"
+    },
+    {
+      "name": "pytest-cov>=4.1.0",
+      "type": "devenv"
+    },
+    {
+      "name": "pytest>=7.4.0",
+      "type": "devenv"
+    },
+    {
+      "name": "twine",
+      "version": "3.3.0",
+      "type": "devenv"
+    },
+    {
+      "name": "wheel",
+      "version": "0.36.2",
+      "type": "devenv"
+    },
+    {
+      "name": "httpx>=0.28.1",
+      "type": "runtime"
+    },
+    {
+      "name": "pyyaml>=6.0.2",
+      "type": "runtime"
+    },
+    {
+      "name": "rich>=14.0.0",
+      "type": "runtime"
+    },
+    {
+      "name": "typer>=0.16.0",
+      "type": "runtime"
     },
     {
       "name": "pytest",

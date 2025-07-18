@@ -9,7 +9,10 @@
       "Bash(uv sync:*)",
       "Bash(cat:*)",
       "Bash(npm install:*)",
-      "Bash(projen new:*)"
+      "Bash(projen new:*)",
+      "Bash(projen)",
+      "Bash(rm:*)",
+      "Bash(git remote:*)"
     ],
     "deny": []
   }
