@@ -1,6 +1,6 @@
 # aix
 
-> *Your AI butler that lives in the terminal and doesn't judge your code*
+> *AI eXecutor - Your AI butler that lives in the terminal and doesn't judge your code*
 
 [![Python](https://img.shields.io/badge/Python-3.8%2B-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -8,7 +8,7 @@
 
 ## What is this sorcery?
 
-aix is like having a really smart intern who lives in your terminal and can:
+aix (AI eXecutor) is like having a really smart intern who lives in your terminal and can:
 - **Read your mind** (via prompts)
 - **Execute your commands** (safely!)
 - **Talk to AI gods** (OpenAI, Anthropic, OpenRouter)
