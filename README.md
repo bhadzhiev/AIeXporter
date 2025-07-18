@@ -195,7 +195,10 @@ aix run system-analysis --param project_type="API" --enable-commands --execute -
 # Create
 aix create "review" "Review this {lang} code:\n\n{code}\n\nFocus: bugs, style, performance"
 
-# Use
+# Use (dry run to preview)
+aix run review --param lang=Python --param code="def fact(n): return 1 if n<=1 else n*fact(n-1)" --dry-run
+
+# Execute with AI (requires API key)
 aix run review --param lang=Python --param code="def fact(n): return 1 if n<=1 else n*fact(n-1)" --execute
 ```
 
@@ -204,7 +207,10 @@ aix run review --param lang=Python --param code="def fact(n): return 1 if n<=1 e
 # Create
 aix create "commit" "Write commit message:\n\nChanges:\n$(git diff --staged)\n\nFollow conventional commits."
 
-# Use
+# Use (dry run to preview)
+aix run commit --enable-commands --dry-run
+
+# Execute with AI (requires API key)
 aix run commit --enable-commands --execute
 ```
 
@@ -213,7 +219,10 @@ aix run commit --enable-commands --execute
 # Create
 aix create "docs" "Document {lang} {type}:\n\nFile: {file}\nCode: {code}\n\nInclude: description, params, examples"
 
-# Use
+# Use (dry run to preview)
+aix run docs --param lang=Python --param type=function --param file=utils.py --param code="def load_data(path): ..." --dry-run
+
+# Execute with AI (requires API key)
 aix run docs --param lang=Python --param type=function --param file=utils.py --param code="def load_data(path): ..." --execute
 ```
 
