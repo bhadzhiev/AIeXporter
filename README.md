@@ -260,9 +260,19 @@ MIT
 
 If you encounter any issues or have questions:
 1. Check the documentation above
-2. Test commands with `promptconsole cmd test "your-command"`
-3. View configuration with `promptconsole config --list`
+2. Test commands with `aix cmd test "your-command"`
+3. View configuration with `aix config --list`
 4. Create an issue on GitHub
+
+---
+
+**Buy me a coffee** ☕
+
+If you find this tool useful, you can support development by buying me a coffee:
+
+**Revolut**: @bozhide29n
+
+Thank you for your support!
 
 ---
 
