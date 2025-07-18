@@ -1,6 +1,6 @@
 # 🚀 Publishing Guide
 
-## 📦 How to Publish PromptConsole to GitHub
+## 📦 How to Publish aix to GitHub
 
 ### 1. **Set up remote repository**
 ```bash
@@ -22,10 +22,10 @@ git push publish v0.1.0
 ### 4. **Install from GitHub (for users)**
 ```bash
 # Users can install directly from GitHub
-uv tool install promptconsole --from git+https://github.com/bhadzhiev/prompt.git
+uv tool install aix --from git+https://github.com/bhadzhiev/aix.git
 
 # Or via pip
-pip install git+https://github.com/bhadzhiev/prompt.git
+pip install git+https://github.com/bhadzhiev/aix.git
 ```
 
 ## 🔧 **Manual Push Commands**
@@ -35,10 +35,10 @@ If you have authentication issues, use these commands:
 ```bash
 # Using GitHub CLI (recommended)
 gh auth login
-git push https://$(gh auth token)@github.com/bhadzhiev/prompt.git master:main
+git push https://$(gh auth token)@github.com/bhadzhiev/aix.git master:main
 
 # Using personal access token
-git push https://YOUR_TOKEN@github.com/bhadzhiev/prompt.git master:main
+git push https://YOUR_TOKEN@github.com/bhadzhiev/aix.git master:main
 ```
 
 ## 🎯 **Ready for Distribution**
@@ -48,7 +48,7 @@ Your repository is now configured with:
 - ✅ GitHub Actions for automated builds
 - ✅ PyPI publishing workflow
 - ✅ Cross-platform executable building
-- ✅ CLI commands (`promptconsole` and `pc`)
+- ✅ CLI command (`aix`)
 
 ## 📋 **User Installation**
 
@@ -56,13 +56,13 @@ Once published, users can install with:
 
 ```bash
 # Via UV (recommended)
-uv tool install promptconsole
+uv tool install aix
 
 # Via pip
-pip install promptconsole
+pip install aix
 
 # From GitHub directly
-uv tool install promptconsole --from git+https://github.com/bhadzhiev/prompt.git
+uv tool install aix --from git+https://github.com/bhadzhiev/aix.git
 ```
 
 ## 🚀 **Next Steps**

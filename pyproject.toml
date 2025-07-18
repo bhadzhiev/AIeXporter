@@ -3,15 +3,15 @@ requires = ["setuptools>=61", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "promptconsole"
+name = "aix"
 version = "0.1.0"
-description = "A comprehensive prompt management and execution tool"
+description = "AI executor - dynamic prompt management and execution tool"
 readme = "README.md"
 requires-python = ">=3.12"
 authors = [
     {name = "Bozhidar Hadzhiev", email = "bhadzhiev@gmail.com"}
 ]
-urls = {Homepage = "https://github.com/bhadzhiev/prompt"}
+urls = {Homepage = "https://github.com/bhadzhiev/aix"}
 license = {text = "MIT"}
 keywords = ["cli", "ai", "prompts", "automation", "development-tools"]
 classifiers = [
@@ -32,8 +32,7 @@ dependencies = [
 ]
 
 [project.scripts]
-promptconsole = "promptconsole.cli:app"
-pc = "promptconsole.cli:app"
+aix = "promptconsole.cli:app"
 
 [project.optional-dependencies]
 dev = [

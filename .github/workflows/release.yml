@@ -50,10 +50,10 @@ jobs:
       - name: Build executable
         run: |
           uv add --dev pyinstaller
-          uv run pyinstaller --onefile --name promptconsole main.py
+          uv run pyinstaller --onefile --name aix main.py
           
       - name: Upload binary
         uses: actions/upload-artifact@v4
         with:
-          name: promptconsole-${{ matrix.os }}
-          path: dist/promptconsole*
+          name: aix-${{ matrix.os }}
+          path: dist/aix*
