@@ -381,11 +381,18 @@ def upgrade():
     
     try:
         import subprocess
-        import sys
+        import shutil
         
-        # Skip uv tool upgrade as it doesn't work for git installs
+        # Find system uv binary
+        uv_path = shutil.which("uv")
+        if not uv_path:
+            console.print("uv not found in PATH. Please install uv first.", style="red")
+            console.print("Install uv: curl -Ls https://astral.sh/uv/install.sh | sh", style="yellow")
+            return
+        
+        console.print("Using system uv to reinstall from GitHub...", style="cyan")
         result = subprocess.run([
-            sys.executable, "-m", "uv", "tool", "install", "aix", 
+            uv_path, "tool", "install", "aix", 
             "--from", "git+https://github.com/bhadzhiev/prompt.git", "--force"
         ], capture_output=True, text=True, timeout=120)
         
