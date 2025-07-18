@@ -1,6 +1,6 @@
-# aix
+# AI eXecutor
 
-> *AI eXecutor - Your AI butler that lives in the terminal and doesn't judge your code*
+> *AI eXecutor (aix) - Your AI butler that lives in the terminal and doesn't judge your code*
 
 [![Python](https://img.shields.io/badge/Python-3.8%2B-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -74,12 +74,12 @@ aix run roast --param language=python --param code="print('hello world')" --exec
 
 | Feature | Description | Why it's cool |
 |---------|-------------|---------------|
-| **🎪 Dynamic Templates** | `{variables}` + `$(commands)` | Your prompts can now read your system |
-| **🤖 Multi-AI Support** | OpenRouter, OpenAI, Anthropic | When one AI is down, use another |
-| **🛡️ Safety First** | Allowlisted commands only | No `rm -rf /` accidents |
-| **🔄 Auto-upgrade** | Self-updating tool | Future-you will thank present-you |
-| **📁 File Storage** | YAML/JSON prompts | Git-friendly templates |
-| **🎯 Auto-complete** | Tab completion everywhere | Because typing is hard |
+| ** Dynamic Templates** | `{variables}` + `$(commands)` | Your prompts can now read your system |
+| ** Multi-AI Support** | OpenRouter, OpenAI, Anthropic | When one AI is down, use another |
+| ** Safety First** | Allowlisted commands only | No `rm -rf /` accidents |
+| ** Auto-upgrade** | Self-updating tool | Future-you will thank present-you |
+| ** File Storage** | YAML/JSON prompts | Git-friendly templates |
+| ** Auto-complete** | Tab completion everywhere | Because typing is hard |
 
 ## Real-world examples (a.k.a. "Show me the money")
 
@@ -164,7 +164,7 @@ aix run my-prompt --output genius-idea.txt --execute
 aix run complex-prompt --param lang=python --param style=pep8 --param complexity=overkill --execute
 ```
 
-## 🐛 Troubleshooting (a.k.a. "It doesn't work!")
+## Troubleshooting (a.k.a. "It doesn't work!")
 
 ### Common Issues and Solutions
 
@@ -206,7 +206,7 @@ aix create meeting-prep "Prepare talking points for meeting about {topic}:\n\nCo
 aix create excuse "Generate a technical excuse for why {feature} is delayed:\n\nCurrent blocker: {blocker}\nTeam size: $(whoami) # it's just me\nDeadline: {deadline}\n\nMake it sound technical but not my fault."
 ```
 
-## ☕ Buy Me a Coffee
+## Buy Me a Coffee
 
 If this tool saves you from writing one more commit message manually, consider buying me a coffee:
 
@@ -214,7 +214,7 @@ If this tool saves you from writing one more commit message manually, consider b
 
 *Every coffee helps me write more sarcastic error messages.*
 
-## 🏆 Testimonials
+## Testimonials
 
 > "I used to spend hours writing commit messages. Now I spend hours debugging why the AI's commit messages don't make sense." - *A satisfied user*
 
@@ -222,7 +222,7 @@ If this tool saves you from writing one more commit message manually, consider b
 
 > "The auto-upgrade feature means I never have to manually update tools again. My laziness has reached new heights." - *DevOps Engineer*
 
-## 📝 License
+## License
 
 MIT License - do whatever you want, just don't blame me when your AI-generated commit messages confuse your team.
 
