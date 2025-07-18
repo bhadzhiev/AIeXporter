@@ -12,7 +12,8 @@
       "Bash(projen new:*)",
       "Bash(projen)",
       "Bash(rm:*)",
-      "Bash(git remote:*)"
+      "Bash(git remote:*)",
+      "Bash(git add:*)"
     ],
     "deny": []
   }
