@@ -24,7 +24,8 @@ class Config:
                 "api_keys": {},
                 "streaming": False,
                 "max_tokens": 1024,
-                "temperature": 0.7
+                "temperature": 0.7,
+                "auto_upgrade": False
             }
             self._save_config(default_config)
             return default_config

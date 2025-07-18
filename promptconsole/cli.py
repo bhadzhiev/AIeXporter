@@ -134,7 +134,8 @@ def run(
     max_tokens: Optional[int] = typer.Option(None, "--max-tokens", help="Maximum tokens to generate"),
     temperature: Optional[float] = typer.Option(None, "--temperature", help="Temperature for generation"),
     execute: bool = typer.Option(False, "--execute", "-e", help="Execute the prompt via API"),
-    enable_commands: bool = typer.Option(False, "--enable-commands", help="Enable command execution in templates")
+    enable_commands: bool = typer.Option(False, "--enable-commands", help="Enable command execution in templates"),
+    auto_upgrade: bool = typer.Option(False, "--auto-upgrade", help="Auto-upgrade PromptConsole before execution")
 ):
     """Run a prompt with parameter substitution and optional API execution."""
     storage = PromptStorage()
@@ -144,6 +145,14 @@ def run(
     if not prompt:
         console.print(f"Prompt '{name}' not found", style="red")
         return
+    
+    # Handle auto-upgrade
+    config_auto_upgrade = config.get("auto_upgrade", False)
+    if auto_upgrade or config_auto_upgrade:
+        console.print("Auto-upgrading PromptConsole...", style="cyan")
+        success = perform_upgrade()
+        if not success:
+            console.print("Upgrade failed, continuing with current version...", style="yellow")
     
     # Parse parameters
     param_dict = {}
@@ -372,12 +381,13 @@ cmd_app.command("list")(commands.show_commands)
 cmd_app.command("template-test")(commands.template_test)
 app.add_typer(cmd_app, name="cmd")
 
-@app.command()
-def upgrade():
-    """Upgrade aix to the latest version from GitHub."""
-    console = Console()
+def perform_upgrade():
+    """Perform the upgrade process programmatically.
     
-    console.print("Upgrading aix to latest version...", style="cyan")
+    Returns:
+        bool: True if upgrade succeeded, False otherwise
+    """
+    console = Console()
     
     try:
         import subprocess
@@ -388,25 +398,30 @@ def upgrade():
         if not uv_path:
             console.print("uv not found in PATH. Please install uv first.", style="red")
             console.print("Install uv: curl -Ls https://astral.sh/uv/install.sh | sh", style="yellow")
-            return
+            return False
         
-        console.print("Using system uv to reinstall from GitHub...", style="cyan")
+        console.print("Upgrading PromptConsole via uv tool...", style="cyan")
         result = subprocess.run([
             uv_path, "tool", "install", "aix", 
             "--from", "git+https://github.com/bhadzhiev/prompt.git", "--force"
         ], capture_output=True, text=True, timeout=120)
         
         if result.returncode == 0:
-            console.print("Successfully upgraded via uv tool", style="green")
-            console.print("Run: aix --help to verify the upgrade", style="green")
+            console.print("Successfully upgraded PromptConsole", style="green")
+            return True
         else:
             console.print("Upgrade failed", style="red")
             console.print("Error:", result.stderr, style="red")
-            console.print("Please run: uv tool install aix --from git+https://github.com/bhadzhiev/prompt.git --force", style="yellow")
+            return False
             
     except Exception as e:
         console.print(f"Upgrade failed: {e}", style="red")
-        console.print("Please run: uv tool install aix --from git+https://github.com/bhadzhiev/prompt.git", style="yellow")
+        return False
+
+@app.command()
+def upgrade():
+    """Upgrade aix to the latest version from GitHub."""
+    perform_upgrade()
 
 if __name__ == "__main__":
     app()
