@@ -383,34 +383,19 @@ def upgrade():
         import subprocess
         import sys
         
-        # Check if installed via uv tool
-        try:
-            result = subprocess.run([
-                sys.executable, "-m", "uv", "tool", "upgrade", "aix"
-            ], capture_output=True, text=True, timeout=30)
-            
-            if result.returncode == 0:
-                console.print("Successfully upgraded via uv tool", style="green")
-                console.print("Run: aix --help to verify the upgrade", style="green")
-                return
-            else:
-                console.print("uv tool upgrade failed, trying pip install...", style="yellow")
-        except (subprocess.TimeoutExpired, FileNotFoundError):
-            console.print("uv tool not found, trying pip install...", style="yellow")
-        
-        # Fallback to pip install from GitHub
+        # Skip uv tool upgrade as it doesn't work for git installs
         result = subprocess.run([
-            sys.executable, "-m", "pip", "install", "--upgrade", 
-            "git+https://github.com/bhadzhiev/prompt.git"
-        ], capture_output=True, text=True, timeout=60)
+            sys.executable, "-m", "uv", "tool", "install", "aix", 
+            "--from", "git+https://github.com/bhadzhiev/prompt.git", "--force"
+        ], capture_output=True, text=True, timeout=120)
         
         if result.returncode == 0:
-            console.print("Successfully upgraded via pip", style="green")
+            console.print("Successfully upgraded via uv tool", style="green")
             console.print("Run: aix --help to verify the upgrade", style="green")
         else:
             console.print("Upgrade failed", style="red")
             console.print("Error:", result.stderr, style="red")
-            console.print("Please run: uv tool install aix --from git+https://github.com/bhadzhiev/prompt.git", style="yellow")
+            console.print("Please run: uv tool install aix --from git+https://github.com/bhadzhiev/prompt.git --force", style="yellow")
             
     except Exception as e:
         console.print(f"Upgrade failed: {e}", style="red")
