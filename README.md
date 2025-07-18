@@ -82,6 +82,8 @@ aix api-key openai
 aix api-key anthropic
 ```
 
+**🆓 New to AI?** Check out our [OpenRouter Guide](OPENROUTER.md) for free models and setup instructions!
+
 ### Creating Dynamic Prompts
 
 Create prompts that automatically include system information:
