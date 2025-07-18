@@ -32,8 +32,8 @@ dependencies = [
 ]
 
 [project.scripts]
-promptconsole = "main:main"
-pc = "main:main"
+promptconsole = "promptconsole.cli:app"
+pc = "promptconsole.cli:app"
 
 [project.optional-dependencies]
 dev = [
