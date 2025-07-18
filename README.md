@@ -1,4 +1,4 @@
-# 🎭 PromptConsole (a.k.a. "aix")
+# aix
 
 > *Your AI butler that lives in the terminal and doesn't judge your code*
 
@@ -8,7 +8,7 @@
 
 ## What is this sorcery?
 
-PromptConsole is like having a really smart intern who lives in your terminal and can:
+aix is like having a really smart intern who lives in your terminal and can:
 - **Read your mind** (via prompts)
 - **Execute your commands** (safely!)
 - **Talk to AI gods** (OpenAI, Anthropic, OpenRouter)
