@@ -22,7 +22,7 @@ git push publish v0.1.0
 ### 4. **Install from GitHub (for users)**
 ```bash
 # Users can install directly from GitHub
-uv tool install promptconsole --git https://github.com/bhadzhiev/prompt.git
+uv tool install promptconsole --from git+https://github.com/bhadzhiev/prompt.git
 
 # Or via pip
 pip install git+https://github.com/bhadzhiev/prompt.git
@@ -62,7 +62,7 @@ uv tool install promptconsole
 pip install promptconsole
 
 # From GitHub directly
-uv tool install promptconsole --git https://github.com/bhadzhiev/prompt.git
+uv tool install promptconsole --from git+https://github.com/bhadzhiev/prompt.git
 ```
 
 ## 🚀 **Next Steps**

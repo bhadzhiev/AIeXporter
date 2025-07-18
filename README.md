@@ -43,7 +43,7 @@ A comprehensive prompt management and execution tool that brings the power of AI
 
 ```bash
 # Install with uv (recommended)
-uv tool install promptconsole --git https://github.com/bhadzhiev/prompt.git
+uv tool install promptconsole --from git+https://github.com/bhadzhiev/prompt.git
 
 # Or install with pip
 pip install git+https://github.com/bhadzhiev/prompt.git
