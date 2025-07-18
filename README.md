@@ -4,13 +4,13 @@ AI executor - dynamic prompt management and execution tool that brings the power
 
 ## Features
 
-### **Prompt Management**
+### Prompt Management
 - Create reusable prompt templates with `{variable}` syntax
 - Save prompts in JSON or YAML format
 - Organize prompts with tags and descriptions
 - Store prompts in `~/.prompts` directory
 
-### **AI Integration**
+### AI Integration
 - Execute prompts via multiple AI providers:
   - **OpenRouter** - Access to 100+ models through one API
   - **OpenAI** - GPT models (GPT-4, GPT-3.5-turbo, etc.)
@@ -19,19 +19,19 @@ AI executor - dynamic prompt management and execution tool that brings the power
 - Token usage tracking and cost estimation
 - Configurable models and parameters
 
-### **Dynamic Command Execution**
+### Dynamic Command Execution
 - Embed shell commands directly in prompts
 - Multiple syntax options: `$(git status)`, `{cmd:ls}`, `{exec:pwd}`
 - Security-first approach with allowlisted commands
 - Real-time system information integration
 
-### **Organization & Management**
+### Organization & Management
 - List all saved prompts with details
 - Search and filter capabilities
 - Delete unwanted prompts
 - Export/import prompt collections
 
-### **Configuration**
+### Configuration
 - Secure API key management
 - Configurable storage location
 - Default providers and models
@@ -82,7 +82,7 @@ aix api-key openai
 aix api-key anthropic
 ```
 
-**🆓 New to AI?** Check out our [OpenRouter Guide](OPENROUTER.md) for free models and setup instructions!
+**New to AI?** Check out our [OpenRouter Guide](OPENROUTER.md) for free models and setup instructions!
 
 ### Creating Dynamic Prompts
 
