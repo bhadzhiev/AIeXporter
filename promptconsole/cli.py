@@ -372,5 +372,49 @@ cmd_app.command("list")(commands.show_commands)
 cmd_app.command("template-test")(commands.template_test)
 app.add_typer(cmd_app, name="cmd")
 
+@app.command()
+def upgrade():
+    """Upgrade aix to the latest version from GitHub."""
+    console = Console()
+    
+    console.print("Upgrading aix to latest version...", style="cyan")
+    
+    try:
+        import subprocess
+        import sys
+        
+        # Check if installed via uv tool
+        try:
+            result = subprocess.run([
+                sys.executable, "-m", "uv", "tool", "upgrade", "aix"
+            ], capture_output=True, text=True, timeout=30)
+            
+            if result.returncode == 0:
+                console.print("Successfully upgraded via uv tool", style="green")
+                console.print("Run: aix --help to verify the upgrade", style="green")
+                return
+            else:
+                console.print("uv tool upgrade failed, trying pip install...", style="yellow")
+        except (subprocess.TimeoutExpired, FileNotFoundError):
+            console.print("uv tool not found, trying pip install...", style="yellow")
+        
+        # Fallback to pip install from GitHub
+        result = subprocess.run([
+            sys.executable, "-m", "pip", "install", "--upgrade", 
+            "git+https://github.com/bhadzhiev/prompt.git"
+        ], capture_output=True, text=True, timeout=60)
+        
+        if result.returncode == 0:
+            console.print("Successfully upgraded via pip", style="green")
+            console.print("Run: aix --help to verify the upgrade", style="green")
+        else:
+            console.print("Upgrade failed", style="red")
+            console.print("Error:", result.stderr, style="red")
+            console.print("Please run: uv tool install aix --from git+https://github.com/bhadzhiev/prompt.git", style="yellow")
+            
+    except Exception as e:
+        console.print(f"Upgrade failed: {e}", style="red")
+        console.print("Please run: uv tool install aix --from git+https://github.com/bhadzhiev/prompt.git", style="yellow")
+
 if __name__ == "__main__":
     app()

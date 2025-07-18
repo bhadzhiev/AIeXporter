@@ -135,6 +135,7 @@ aix run system-analysis --param project_type="API" --enable-commands --execute -
 | `cmd test` | Test command execution | `aix cmd test "git status"` |
 | `cmd list` | Show allowed commands | `aix cmd list` |
 | `cmd template-test` | Test template with commands | `aix cmd template-test "Hello $(whoami)"` |
+| `upgrade` | Upgrade aix to latest version | `aix upgrade` |
 
 ### Run Command Options
 
