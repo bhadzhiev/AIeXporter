@@ -41,7 +41,7 @@ uv tool install aix --from git+https://github.com/bhadzhiev/AIeXporter.git
 pip install git+https://github.com/bhadzhiev/AIeXporter.git
 
 # Option C: The "I like to suffer" way
-# (clone, install deps, etc... see [Installation Guide](doc/INSTALLATION.md))
+# (clone, install deps, etc... see [Installation Guide](docs/INSTALLATION.md))
 ```
 
 ### Step 2: Get an API Key (a.k.a. "Pay the AI tax")
@@ -121,11 +121,11 @@ aix run sys-report --enable-commands --dry-run
 
 We've hidden all the boring details in separate files because READMEs should be fun:
 
-- **[Installation Guide](doc/INSTALLATION.md)** - For when `pip install` isn't working
-- **[Usage Guide](doc/USAGE.md)** - For when you want to do more than just `aix --help`
-- **[Template Guide](doc/TEMPLATES.md)** - For when you want to become a prompt wizard
-- **[API Providers](doc/API_PROVIDERS.md)** - For when you want to know which AI to bribe
-- **[Command Reference](doc/COMMANDS.md)** - For when you forget what `aix run --param` does
+- **[Installation Guide](docs/INSTALLATION.md)** - For when `pip install` isn't working
+- **[Usage Guide](docs/USAGE.md)** - For when you want to do more than just `aix --help`
+- **[Template Guide](docs/TEMPLATES.md)** - For when you want to become a prompt wizard
+- **[API Providers](docs/API_PROVIDERS.md)** - For when you want to know which AI to bribe
+- **[Command Reference](docs/COMMANDS.md)** - For when you forget what `aix run --param` does
 
 ## Configuration (a.k.a. "Making it yours")
 
