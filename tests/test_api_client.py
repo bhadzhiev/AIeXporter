@@ -1,13 +1,11 @@
 import pytest
-import json
-from unittest.mock import patch, MagicMock
 from aix.api_client import (
-    OpenRouterClient, 
-    OpenAIClient, 
+    OpenRouterClient,
+    OpenAIClient,
     AnthropicClient,
     CustomAPIClient,
     APIResponse,
-    get_client
+    get_client,
 )
 
 
@@ -17,7 +15,7 @@ class TestOpenRouterClient:
     def test_client_initialization(self):
         """Test client initialization."""
         client = OpenRouterClient("test-key")
-        
+
         assert client.api_key == "test-key"
         assert client.base_url == "https://openrouter.ai/api/v1"
 
@@ -34,7 +32,7 @@ class TestOpenAIClient:
     def test_client_initialization(self):
         """Test client initialization."""
         client = OpenAIClient("test-key")
-        
+
         assert client.api_key == "test-key"
         assert client.base_url == "https://api.openai.com/v1"
 
@@ -51,7 +49,7 @@ class TestAnthropicClient:
     def test_client_initialization(self):
         """Test client initialization."""
         client = AnthropicClient("test-key")
-        
+
         assert client.api_key == "test-key"
         assert client.base_url == "https://api.anthropic.com/v1"
 
@@ -72,9 +70,9 @@ class TestAPIResponse:
             model="test-model",
             usage={"prompt_tokens": 10, "completion_tokens": 20},
             cost=0.001,
-            provider="test-provider"
+            provider="test-provider",
         )
-        
+
         assert response.content == "Test response content"
         assert response.model == "test-model"
         assert response.usage == {"prompt_tokens": 10, "completion_tokens": 20}
@@ -84,11 +82,8 @@ class TestAPIResponse:
 
     def test_api_response_minimal(self):
         """Test API response with minimal fields."""
-        response = APIResponse(
-            content="Minimal response",
-            model="minimal-model"
-        )
-        
+        response = APIResponse(content="Minimal response", model="minimal-model")
+
         assert response.content == "Minimal response"
         assert response.model == "minimal-model"
         assert response.usage is None
@@ -103,12 +98,12 @@ class TestCustomAPIClient:
         """Test custom client initialization."""
         headers = {"X-Custom-Header": "test-value"}
         client = CustomAPIClient(
-            "test-key", 
-            "http://localhost:11434/v1", 
+            "test-key",
+            "http://localhost:11434/v1",
             headers=headers,
-            provider_name="ollama"
+            provider_name="ollama",
         )
-        
+
         assert client.api_key == "test-key"
         assert client.base_url == "http://localhost:11434/v1"
         assert client.custom_headers == headers
@@ -117,7 +112,7 @@ class TestCustomAPIClient:
     def test_client_initialization_minimal(self):
         """Test custom client initialization with minimal config."""
         client = CustomAPIClient("test-key", "http://localhost:8080/v1")
-        
+
         assert client.api_key == "test-key"
         assert client.base_url == "http://localhost:8080/v1"
         assert client.custom_headers == {}
@@ -159,7 +154,7 @@ class TestGetClient:
         custom_config = {
             "base_url": "http://localhost:11434/v1",
             "headers": {"X-Custom": "test"},
-            "name": "ollama"
+            "name": "ollama",
         }
         client = get_client("custom", "test-key", custom_config)
         assert isinstance(client, CustomAPIClient)

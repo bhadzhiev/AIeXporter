@@ -1,4 +1,3 @@
-import pytest
 from aix.template import PromptTemplate, TemplateSafeEncoder
 
 
@@ -8,11 +7,9 @@ class TestPromptTemplate:
     def test_template_creation(self):
         """Test basic template creation."""
         template = PromptTemplate(
-            name="test",
-            template="Hello {name}",
-            description="A test template"
+            name="test", template="Hello {name}", description="A test template"
         )
-        
+
         assert template.name == "test"
         assert template.template == "Hello {name}"
         assert template.description == "A test template"
@@ -43,49 +40,45 @@ class TestPromptTemplate:
     def test_render_simple(self):
         """Test simple variable substitution."""
         template = PromptTemplate(
-            name="simple",
-            template="Hello {name}, welcome to {place}!"
+            name="simple", template="Hello {name}, welcome to {place}!"
         )
-        
+
         variables = {"name": "Alice", "place": "Wonderland"}
         result = template.render_simple(variables)
-        
+
         assert result == "Hello Alice, welcome to Wonderland!"
 
     def test_render_with_missing_variables(self):
         """Test rendering with missing variables."""
         template = PromptTemplate(
-            name="missing",
-            template="Hello {name}, your age is {age}"
+            name="missing", template="Hello {name}, your age is {age}"
         )
-        
+
         variables = {"name": "Alice"}  # Missing age
         result = template.render_simple(variables)
-        
+
         assert result == "Hello Alice, your age is {age}"
 
     def test_validate_variables_all_present(self):
         """Test variable validation with all variables provided."""
         template = PromptTemplate(
-            name="validation",
-            template="Hello {name}, welcome {place}"
+            name="validation", template="Hello {name}, welcome {place}"
         )
-        
+
         variables = {"name": "Alice", "place": "here"}
         missing = template.validate_variables(variables)
-        
+
         assert missing == []
 
     def test_validate_variables_missing(self):
         """Test variable validation with missing variables."""
         template = PromptTemplate(
-            name="validation",
-            template="Hello {name}, welcome {place}"
+            name="validation", template="Hello {name}, welcome {place}"
         )
-        
+
         variables = {"name": "Alice"}
         missing = template.validate_variables(variables)
-        
+
         assert missing == ["place"]
 
     def test_template_to_dict_and_back(self):
@@ -94,12 +87,12 @@ class TestPromptTemplate:
             name="serial",
             template="Hello {name}",
             description="Test serialization",
-            tags=["test", "serial"]
+            tags=["test", "serial"],
         )
-        
+
         dict_data = original.to_dict()
         restored = PromptTemplate.from_dict(dict_data)
-        
+
         assert restored.name == original.name
         assert restored.template == original.template
         assert restored.description == original.description
@@ -107,11 +100,8 @@ class TestPromptTemplate:
 
     def test_template_with_empty_fields(self):
         """Test template creation with empty optional fields."""
-        template = PromptTemplate(
-            name="minimal",
-            template="Hello world"
-        )
-        
+        template = PromptTemplate(name="minimal", template="Hello world")
+
         assert template.description == ""
         assert template.tags == []
         assert template.variables == []
@@ -120,9 +110,9 @@ class TestPromptTemplate:
         """Test template with various command syntaxes."""
         template = PromptTemplate(
             name="commands",
-            template="User: $(whoami), Path: {cmd:pwd}, Date: {exec:date}"
+            template="User: $(whoami), Path: {cmd:pwd}, Date: {exec:date}",
         )
-        
+
         assert template.variables == []  # No variables, only commands
 
 
@@ -158,13 +148,13 @@ class TestTemplateSafeEncoder:
         assert quoted.startswith('"')
         assert quoted.endswith('"')
         # Check that the content is properly escaped
-        assert 'Hello' in quoted and 'world' in quoted
+        assert "Hello" in quoted and "world" in quoted
 
     def test_format_for_cli(self):
         """Test complete CLI formatting."""
         template = "Hello\nWorld\t{variable}"
         formatted = TemplateSafeEncoder.format_for_cli(template)
-        
+
         assert formatted.startswith('"')
         assert formatted.endswith('"')
         # Check that newline and tab are properly escaped

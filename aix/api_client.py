@@ -1,9 +1,10 @@
 import httpx
 import json
-from typing import Dict, Any, Optional, AsyncGenerator, Generator
+from typing import Dict, Any, Optional, Generator
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import Enum
+
 
 class Provider(Enum):
     OPENROUTER = "openrouter"
@@ -12,6 +13,7 @@ class Provider(Enum):
     GROQ = "groq"
     TOGETHER = "together"
     CUSTOM = "custom"
+
 
 @dataclass
 class APIResponse:
@@ -22,80 +24,89 @@ class APIResponse:
     provider: Optional[str] = None
     raw_response: Optional[Dict[str, Any]] = None
 
+
 class BaseAPIClient(ABC):
     def __init__(self, api_key: str, base_url: str = None):
         self.api_key = api_key
         self.base_url = base_url
         self.client = httpx.Client(timeout=60.0)
-    
+
     @abstractmethod
     def generate(self, prompt: str, model: str = None, **kwargs) -> APIResponse:
         pass
-    
+
     @abstractmethod
-    def stream_generate(self, prompt: str, model: str = None, **kwargs) -> Generator[str, None, None]:
+    def stream_generate(
+        self, prompt: str, model: str = None, **kwargs
+    ) -> Generator[str, None, None]:
         pass
-    
+
     def close(self):
         self.client.close()
+
 
 class OpenRouterClient(BaseAPIClient):
     def __init__(self, api_key: str):
         super().__init__(api_key, "https://openrouter.ai/api/v1")
-    
-    def generate(self, prompt: str, model: str = "meta-llama/llama-3.2-3b-instruct:free", **kwargs) -> APIResponse:
+
+    def generate(
+        self,
+        prompt: str,
+        model: str = "meta-llama/llama-3.2-3b-instruct:free",
+        **kwargs,
+    ) -> APIResponse:
         headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",
             "HTTP-Referer": "https://github.com/promptconsole/promptconsole",
-            "X-Title": "PromptConsole"
+            "X-Title": "PromptConsole",
         }
-        
+
         data = {
             "model": model,
             "messages": [{"role": "user", "content": prompt}],
-            **kwargs
+            **kwargs,
         }
-        
+
         response = self.client.post(
-            f"{self.base_url}/chat/completions",
-            headers=headers,
-            json=data
+            f"{self.base_url}/chat/completions", headers=headers, json=data
         )
         response.raise_for_status()
-        
+
         result = response.json()
         content = result["choices"][0]["message"]["content"]
         usage = result.get("usage")
-        
+
         return APIResponse(
             content=content,
             model=model,
             usage=usage,
             provider="openrouter",
-            raw_response=result
+            raw_response=result,
         )
-    
-    def stream_generate(self, prompt: str, model: str = "meta-llama/llama-3.2-3b-instruct:free", **kwargs) -> Generator[str, None, None]:
+
+    def stream_generate(
+        self,
+        prompt: str,
+        model: str = "meta-llama/llama-3.2-3b-instruct:free",
+        **kwargs,
+    ) -> Generator[str, None, None]:
         headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",
             "HTTP-Referer": "https://github.com/promptconsole/promptconsole",
-            "X-Title": "PromptConsole"
+            "X-Title": "PromptConsole",
         }
-        
+
         data = {
             "model": model,
             "messages": [{"role": "user", "content": prompt}],
             "stream": True,
-            **kwargs
+            **kwargs,
         }
-        
+
         with self.client.stream(
-            "POST",
-            f"{self.base_url}/chat/completions",
-            headers=headers,
-            json=data
+            "POST", f"{self.base_url}/chat/completions", headers=headers, json=data
         ) as response:
             response.raise_for_status()
             for line in response.iter_lines():
@@ -113,73 +124,77 @@ class OpenRouterClient(BaseAPIClient):
                     except json.JSONDecodeError:
                         continue
 
+
 class OpenAIClient(BaseAPIClient):
     def __init__(self, api_key: str, base_url: str = "https://api.openai.com/v1"):
         super().__init__(api_key, base_url)
         self.is_openrouter = "openrouter.ai" in base_url
-    
-    def generate(self, prompt: str, model: str = "gpt-3.5-turbo", **kwargs) -> APIResponse:
+
+    def generate(
+        self, prompt: str, model: str = "gpt-3.5-turbo", **kwargs
+    ) -> APIResponse:
         headers = {
             "Authorization": f"Bearer {self.api_key}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
         }
-        
+
         if self.is_openrouter:
-            headers.update({
-                "HTTP-Referer": "https://github.com/promptconsole/promptconsole",
-                "X-Title": "PromptConsole"
-            })
-        
+            headers.update(
+                {
+                    "HTTP-Referer": "https://github.com/promptconsole/promptconsole",
+                    "X-Title": "PromptConsole",
+                }
+            )
+
         data = {
             "model": model,
             "messages": [{"role": "user", "content": prompt}],
-            **kwargs
+            **kwargs,
         }
-        
+
         response = self.client.post(
-            f"{self.base_url}/chat/completions",
-            headers=headers,
-            json=data
+            f"{self.base_url}/chat/completions", headers=headers, json=data
         )
         response.raise_for_status()
-        
+
         result = response.json()
         content = result["choices"][0]["message"]["content"]
         usage = result.get("usage")
-        
+
         provider_name = "openrouter" if self.is_openrouter else "openai"
         return APIResponse(
             content=content,
             model=model,
             usage=usage,
             provider=provider_name,
-            raw_response=result
+            raw_response=result,
         )
-    
-    def stream_generate(self, prompt: str, model: str = "gpt-3.5-turbo", **kwargs) -> Generator[str, None, None]:
+
+    def stream_generate(
+        self, prompt: str, model: str = "gpt-3.5-turbo", **kwargs
+    ) -> Generator[str, None, None]:
         headers = {
             "Authorization": f"Bearer {self.api_key}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
         }
-        
+
         if self.is_openrouter:
-            headers.update({
-                "HTTP-Referer": "https://github.com/promptconsole/promptconsole",
-                "X-Title": "PromptConsole"
-            })
-        
+            headers.update(
+                {
+                    "HTTP-Referer": "https://github.com/promptconsole/promptconsole",
+                    "X-Title": "PromptConsole",
+                }
+            )
+
         data = {
             "model": model,
             "messages": [{"role": "user", "content": prompt}],
             "stream": True,
-            **kwargs
+            **kwargs,
         }
-        
+
         with self.client.stream(
-            "POST",
-            f"{self.base_url}/chat/completions",
-            headers=headers,
-            json=data
+            "POST", f"{self.base_url}/chat/completions", headers=headers, json=data
         ) as response:
             response.raise_for_status()
             for line in response.iter_lines():
@@ -197,82 +212,92 @@ class OpenAIClient(BaseAPIClient):
                     except json.JSONDecodeError:
                         continue
 
+
 class CustomAPIClient(BaseAPIClient):
-    def __init__(self, api_key: str, base_url: str, headers: Dict[str, str] = None, provider_name: str = "custom"):
+    def __init__(
+        self,
+        api_key: str,
+        base_url: str,
+        headers: Dict[str, str] = None,
+        provider_name: str = "custom",
+    ):
         super().__init__(api_key, base_url)
         self.custom_headers = headers or {}
         self.provider_name = provider_name
-    
+
     def generate(self, prompt: str, model: str = None, **kwargs) -> APIResponse:
         headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",
-            **self.custom_headers
+            **self.custom_headers,
         }
-        
+
         data = {
             "model": model,
             "messages": [{"role": "user", "content": prompt}],
-            **kwargs
+            **kwargs,
         }
-        
+
         try:
             response = self.client.post(
-                f"{self.base_url}/chat/completions",
-                headers=headers,
-                json=data
+                f"{self.base_url}/chat/completions", headers=headers, json=data
             )
             response.raise_for_status()
-            
+
             result = response.json()
-            
+
             # Handle different response formats more robustly
             if "choices" not in result or not result["choices"]:
-                raise ValueError(f"Invalid response format from {self.provider_name}: missing 'choices'")
-            
+                raise ValueError(
+                    f"Invalid response format from {self.provider_name}: missing 'choices'"
+                )
+
             choice = result["choices"][0]
             if "message" not in choice:
-                raise ValueError(f"Invalid response format from {self.provider_name}: missing 'message' in choice")
-            
+                raise ValueError(
+                    f"Invalid response format from {self.provider_name}: missing 'message' in choice"
+                )
+
             content = choice["message"].get("content", "")
             usage = result.get("usage")
-            
+
             return APIResponse(
                 content=content,
                 model=model,
                 usage=usage,
                 provider=self.provider_name,
-                raw_response=result
+                raw_response=result,
             )
         except httpx.TimeoutException as e:
             raise ValueError(f"Request to {self.provider_name} timed out: {e}")
         except httpx.HTTPStatusError as e:
-            raise ValueError(f"HTTP error from {self.provider_name}: {e.response.status_code} - {e.response.text}")
+            raise ValueError(
+                f"HTTP error from {self.provider_name}: {e.response.status_code} - {e.response.text}"
+            )
         except httpx.RequestError as e:
             raise ValueError(f"Request error to {self.provider_name}: {e}")
         except Exception as e:
             raise ValueError(f"Unexpected error with {self.provider_name}: {e}")
-    
-    def stream_generate(self, prompt: str, model: str = None, **kwargs) -> Generator[str, None, None]:
+
+    def stream_generate(
+        self, prompt: str, model: str = None, **kwargs
+    ) -> Generator[str, None, None]:
         headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",
-            **self.custom_headers
+            **self.custom_headers,
         }
-        
+
         data = {
             "model": model,
             "messages": [{"role": "user", "content": prompt}],
             "stream": True,
-            **kwargs
+            **kwargs,
         }
-        
+
         try:
             with self.client.stream(
-                "POST",
-                f"{self.base_url}/chat/completions",
-                headers=headers,
-                json=data
+                "POST", f"{self.base_url}/chat/completions", headers=headers, json=data
             ) as response:
                 response.raise_for_status()
                 for line in response.iter_lines():
@@ -290,71 +315,79 @@ class CustomAPIClient(BaseAPIClient):
                         except json.JSONDecodeError:
                             continue
         except httpx.TimeoutException as e:
-            raise ValueError(f"Streaming request to {self.provider_name} timed out: {e}")
+            raise ValueError(
+                f"Streaming request to {self.provider_name} timed out: {e}"
+            )
         except httpx.HTTPStatusError as e:
-            raise ValueError(f"HTTP error during streaming from {self.provider_name}: {e.response.status_code}")
+            raise ValueError(
+                f"HTTP error during streaming from {self.provider_name}: {e.response.status_code}"
+            )
         except httpx.RequestError as e:
-            raise ValueError(f"Request error during streaming to {self.provider_name}: {e}")
+            raise ValueError(
+                f"Request error during streaming to {self.provider_name}: {e}"
+            )
         except Exception as e:
-            raise ValueError(f"Unexpected error during streaming with {self.provider_name}: {e}")
+            raise ValueError(
+                f"Unexpected error during streaming with {self.provider_name}: {e}"
+            )
+
 
 class AnthropicClient(BaseAPIClient):
     def __init__(self, api_key: str):
         super().__init__(api_key, "https://api.anthropic.com/v1")
-    
-    def generate(self, prompt: str, model: str = "claude-3-haiku-20240307", **kwargs) -> APIResponse:
+
+    def generate(
+        self, prompt: str, model: str = "claude-3-haiku-20240307", **kwargs
+    ) -> APIResponse:
         headers = {
             "x-api-key": self.api_key,
             "Content-Type": "application/json",
-            "anthropic-version": "2023-06-01"
+            "anthropic-version": "2023-06-01",
         }
-        
+
         data = {
             "model": model,
             "max_tokens": kwargs.get("max_tokens", 1024),
             "messages": [{"role": "user", "content": prompt}],
-            **{k: v for k, v in kwargs.items() if k != "max_tokens"}
+            **{k: v for k, v in kwargs.items() if k != "max_tokens"},
         }
-        
+
         response = self.client.post(
-            f"{self.base_url}/messages",
-            headers=headers,
-            json=data
+            f"{self.base_url}/messages", headers=headers, json=data
         )
         response.raise_for_status()
-        
+
         result = response.json()
         content = result["content"][0]["text"]
         usage = result.get("usage")
-        
+
         return APIResponse(
             content=content,
             model=model,
             usage=usage,
             provider="anthropic",
-            raw_response=result
+            raw_response=result,
         )
-    
-    def stream_generate(self, prompt: str, model: str = "claude-3-haiku-20240307", **kwargs) -> Generator[str, None, None]:
+
+    def stream_generate(
+        self, prompt: str, model: str = "claude-3-haiku-20240307", **kwargs
+    ) -> Generator[str, None, None]:
         headers = {
             "x-api-key": self.api_key,
             "Content-Type": "application/json",
-            "anthropic-version": "2023-06-01"
+            "anthropic-version": "2023-06-01",
         }
-        
+
         data = {
             "model": model,
             "max_tokens": kwargs.get("max_tokens", 1024),
             "messages": [{"role": "user", "content": prompt}],
             "stream": True,
-            **{k: v for k, v in kwargs.items() if k not in ["max_tokens"]}
+            **{k: v for k, v in kwargs.items() if k not in ["max_tokens"]},
         }
-        
+
         with self.client.stream(
-            "POST",
-            f"{self.base_url}/messages",
-            headers=headers,
-            json=data
+            "POST", f"{self.base_url}/messages", headers=headers, json=data
         ) as response:
             response.raise_for_status()
             for line in response.iter_lines():
@@ -369,7 +402,10 @@ class AnthropicClient(BaseAPIClient):
                     except json.JSONDecodeError:
                         continue
 
-def get_client(provider: str, api_key: str, custom_config: Dict[str, Any] = None) -> BaseAPIClient:
+
+def get_client(
+    provider: str, api_key: str, custom_config: Dict[str, Any] = None
+) -> BaseAPIClient:
     """Factory function to get the appropriate API client."""
     if provider == "openrouter":
         # Use OpenAI client with OpenRouter endpoint
@@ -385,7 +421,7 @@ def get_client(provider: str, api_key: str, custom_config: Dict[str, Any] = None
             api_key=api_key,
             base_url=custom_config["base_url"],
             headers=custom_config.get("headers", {}),
-            provider_name=custom_config.get("name", "custom")
+            provider_name=custom_config.get("name", "custom"),
         )
     else:
         raise ValueError(f"Unsupported provider: {provider}")

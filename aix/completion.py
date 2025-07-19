@@ -3,10 +3,10 @@ Autocompletion support for Typer CLI commands.
 Provides dynamic completion for prompt names, variables, providers, and models.
 """
 
-from typing import List, Optional
-import typer
+from typing import List
 from .storage import PromptStorage
 from .config import Config
+
 
 def complete_prompt_names(incomplete: str) -> List[str]:
     """Complete prompt names from stored prompts."""
@@ -14,19 +14,20 @@ def complete_prompt_names(incomplete: str) -> List[str]:
         storage = PromptStorage()
         prompts = storage.list_prompts()
         names = [prompt.name for prompt in prompts]
-        
+
         # Filter by incomplete text
         if incomplete:
             names = [name for name in names if name.startswith(incomplete)]
-        
+
         return names
     except Exception:
         return []
 
+
 def complete_providers(incomplete: str) -> List[str]:
     """Complete API provider names including custom providers."""
     providers = ["openrouter", "openai", "anthropic"]
-    
+
     # Add custom providers
     try:
         config = Config()
@@ -35,17 +36,18 @@ def complete_providers(incomplete: str) -> List[str]:
         providers.extend(custom_provider_names)
     except Exception:
         pass  # Ignore errors and just return built-in providers
-    
+
     if incomplete:
         providers = [p for p in providers if p.startswith(incomplete)]
-    
+
     return providers
+
 
 def complete_openrouter_models(incomplete: str) -> List[str]:
     """Complete OpenRouter model names."""
     models = [
         "meta-llama/llama-3.2-3b-instruct:free",
-        "meta-llama/llama-3.2-1b-instruct:free", 
+        "meta-llama/llama-3.2-1b-instruct:free",
         "meta-llama/llama-3.1-8b-instruct:free",
         "mistralai/mistral-7b-instruct:free",
         "microsoft/phi-3-mini-128k-instruct:free",
@@ -59,13 +61,14 @@ def complete_openrouter_models(incomplete: str) -> List[str]:
         "openai/gpt-3.5-turbo",
         "google/gemini-pro",
         "mistralai/mistral-large",
-        "cohere/command-r-plus"
+        "cohere/command-r-plus",
     ]
-    
+
     if incomplete:
         models = [m for m in models if m.startswith(incomplete)]
-    
+
     return models
+
 
 def complete_openai_models(incomplete: str) -> List[str]:
     """Complete OpenAI model names."""
@@ -74,28 +77,30 @@ def complete_openai_models(incomplete: str) -> List[str]:
         "gpt-4-turbo",
         "gpt-4-0125-preview",
         "gpt-3.5-turbo",
-        "gpt-3.5-turbo-0125"
+        "gpt-3.5-turbo-0125",
     ]
-    
+
     if incomplete:
         models = [m for m in models if m.startswith(incomplete)]
-    
+
     return models
+
 
 def complete_anthropic_models(incomplete: str) -> List[str]:
     """Complete Anthropic model names."""
     models = [
         "claude-3-opus-20240229",
-        "claude-3-sonnet-20240229", 
+        "claude-3-sonnet-20240229",
         "claude-3-haiku-20240307",
         "claude-2.1",
-        "claude-2.0"
+        "claude-2.0",
     ]
-    
+
     if incomplete:
         models = [m for m in models if m.startswith(incomplete)]
-    
+
     return models
+
 
 def complete_models(incomplete: str) -> List[str]:
     """Complete model names - defaults to OpenRouter models."""
@@ -103,13 +108,14 @@ def complete_models(incomplete: str) -> List[str]:
     # Users can override with --provider to get provider-specific models
     return complete_openrouter_models(incomplete)
 
+
 def complete_prompt_variables(incomplete: str) -> List[str]:
     """Complete variable names in key=value format."""
     # For now, just return some common variable patterns
     # This could be enhanced to be context-aware in the future
     common_vars = [
         "language=",
-        "code=", 
+        "code=",
         "file=",
         "project=",
         "description=",
@@ -117,19 +123,20 @@ def complete_prompt_variables(incomplete: str) -> List[str]:
         "output=",
         "type=",
         "format=",
-        "style="
+        "style=",
     ]
-    
+
     if incomplete:
         return [var for var in common_vars if var.startswith(incomplete)]
-    
+
     return common_vars
+
 
 def complete_config_keys(incomplete: str) -> List[str]:
     """Complete configuration key names."""
     keys = [
         "storage_path",
-        "default_format", 
+        "default_format",
         "editor",
         "auto_backup",
         "max_backups",
@@ -141,41 +148,43 @@ def complete_config_keys(incomplete: str) -> List[str]:
         "max_tokens",
         "temperature",
         "api_keys.openrouter",
-        "api_keys.openai", 
-        "api_keys.anthropic"
+        "api_keys.openai",
+        "api_keys.anthropic",
     ]
-    
+
     if incomplete:
         keys = [k for k in keys if k.startswith(incomplete)]
-    
+
     return keys
+
 
 def complete_tags(incomplete: str) -> List[str]:
     """Complete tag names from existing prompts."""
     try:
         storage = PromptStorage()
         prompts = storage.list_prompts()
-        
+
         # Collect all unique tags
         all_tags = set()
         for prompt in prompts:
             if prompt.tags:
                 all_tags.update(prompt.tags)
-        
+
         tags = list(all_tags)
-        
+
         if incomplete:
             tags = [tag for tag in tags if tag.startswith(incomplete)]
-        
+
         return tags
     except Exception:
         return []
 
+
 def complete_formats(incomplete: str) -> List[str]:
     """Complete file format options."""
     formats = ["yaml", "json"]
-    
+
     if incomplete:
         formats = [f for f in formats if f.startswith(incomplete)]
-    
+
     return formats
