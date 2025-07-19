@@ -1,3 +1,9 @@
+## v0.2.2 (2025-07-19)
+
+### Fix
+
+- update __init__.py version to match pyproject.toml (0.2.1)
+
 ## v0.2.1 (2025-07-19)
 
 ### Fix
