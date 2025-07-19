@@ -52,10 +52,10 @@ def show_commands():
         info = executor.get_command_info(cmd)
         
         if "error" in info:
-            status = "❌ Not found"
+            status = "Not found"
             version = info["error"]
         else:
-            status = "✅ Available"
+            status = "Available"
             version = info.get("version", "Unknown")
         
         table.add_row(cmd, status, version)
@@ -77,13 +77,13 @@ def template_test(
                 key, value = v.split("=", 1)
                 variables[key.strip()] = value.strip()
     
-    console.print(f"🧪 Testing template:", style="bold")
+    console.print(f"Testing template:", style="bold")
     console.print(Panel(template, title="Template", expand=False))
     
     # Extract commands first
     commands = executor.extract_commands(template)
     if commands:
-        console.print("🔍 Found commands:", style="yellow")
+        console.print("Found commands:", style="yellow")
         for placeholder, command in commands:
             console.print(f"  {placeholder} → {command}")
     
@@ -92,13 +92,13 @@ def template_test(
         result, command_outputs = executor.process_template(template, variables)
         
         if command_outputs:
-            console.print("\n🔧 Command outputs:", style="blue")
+            console.print("\nCommand outputs:", style="blue")
             for placeholder, output in command_outputs.items():
                 console.print(f"  {placeholder}")
                 console.print(Panel(output, border_style="blue", expand=False))
         
-        console.print("\n🎯 Final result:", style="green")
+        console.print("\nFinal result:", style="green")
         console.print(Panel(result, title="Processed Template", expand=False))
         
     except Exception as e:
-        console.print(f"❌ Error processing template: {e}", style="red")
+        console.print(f"Error processing template: {e}", style="red")

@@ -172,9 +172,9 @@ def list(
         # Show collection status hint
         if current_collection:
             if not all_templates:
-                console.print(f"[dim]💡 Use --all to see all templates or 'aix collection-unload' to work with all templates[/dim]")
+                console.print(f"[dim]Tip: Use --all to see all templates or 'aix collection-unload' to work with all templates[/dim]")
             else:
-                console.print(f"[dim]📌 Collection '{current_collection}' is loaded[/dim]")
+                console.print(f"[dim]Current collection: '{current_collection}' is loaded[/dim]")
 
 @app.command()
 def show(
@@ -349,16 +349,16 @@ def run(
     if not prompt:
         console.print(f"Prompt '{name}' not found", style="red")
         if current_collection:
-            console.print(f"💡 Currently in collection '{current_collection}'. Use 'aix list --all' to see all templates", style="cyan")
+            console.print(f"Tip: Currently in collection '{current_collection}'. Use 'aix list --all' to see all templates", style="cyan")
         return
     
     # If a collection is loaded, check if the prompt is in it
     if current_collection:
         collection = manager.collection_storage.get_collection(current_collection)
         if collection and not collection.has_template(name):
-            console.print(f"⚠️  Prompt '{name}' is not in the current collection '{current_collection}'", style="yellow")
-            console.print(f"💡 Add it with: aix collection-add {name}", style="cyan")
-            console.print(f"💡 Or unload collection with: aix collection-unload", style="cyan")
+            console.print(f"Warning: Prompt '{name}' is not in the current collection '{current_collection}'", style="yellow")
+            console.print(f"Tip: Add it with: aix collection-add {name}", style="cyan")
+            console.print(f"Tip: Or unload collection with: aix collection-unload", style="cyan")
             # Still allow execution, just warn the user
     
     # Handle auto-upgrade
@@ -434,7 +434,7 @@ def run(
     
     if not api_key:
         console.print(f"No API key found for provider '{selected_provider}'", style="red")
-        console.print(f"💡 Set it up with: aix api-key {selected_provider}", style="yellow")
+        console.print(f"Tip: Set it up with: aix api-key {selected_provider}", style="yellow")
         
         # Interactive API key setup
         if typer.confirm("Would you like to set it up now?"):
@@ -442,9 +442,9 @@ def run(
                 # Reload config to get the new API key
                 config = Config()
                 api_key = config.get_api_key(selected_provider)
-                console.print(f"✅ API key for {selected_provider} configured successfully!", style="green")
+                console.print(f"API key for {selected_provider} configured successfully!", style="green")
             else:
-                console.print("❌ Failed to set up API key", style="red")
+                console.print("Failed to set up API key", style="red")
                 return
         else:
             console.print("Operation cancelled. You can set up API keys later with:", style="yellow")
@@ -477,7 +477,7 @@ def run(
                 response_text += chunk
             console.print()  # New line after streaming
         else:
-            with console.status("🔄 Generating response..."):
+            with console.status("Generating response..."):
                 response = client.generate(generated_prompt, selected_model, **api_params)
             response_text = response.content
             
@@ -553,10 +553,10 @@ def config(
     if list_all or (not key and not value and not get and not set_pair):
         settings = config_manager.get_all()
         if not settings:
-            console.print("📝 No configuration found", style="yellow")
+            console.print("No configuration found", style="yellow")
             return
         
-        table = Table(title="⚙️  Configuration")
+        table = Table(title="Configuration")
         table.add_column("Key", style="cyan")
         table.add_column("Value", style="magenta")
         
@@ -783,7 +783,7 @@ def collection_list():
     table.add_column("Status", style="magenta")
     
     for collection in collections:
-        status = "📌 Current" if collection.name == current_collection else ""
+        status = "Current" if collection.name == current_collection else ""
         tags_str = ", ".join(collection.tags) if collection.tags else ""
         
         table.add_row(
@@ -828,7 +828,7 @@ def collection_load(
         # Show template validation
         validation = manager.collection_storage.validate_collection_templates(name, manager.prompt_storage)
         if validation["missing"]:
-            console.print(f"⚠️  Missing templates: {', '.join(validation['missing'])}", style="yellow")
+            console.print(f"Warning: Missing templates: {', '.join(validation['missing'])}", style="yellow")
         
         console.print("\nUse 'aix list' to see templates in this collection", style="cyan")
     else:
@@ -940,13 +940,13 @@ def collection_info(
         table.add_column("Status", style="green")
         
         for template_name in collection.templates:
-            status = "✅ Available" if template_name in validation["valid"] else "❌ Missing"
+            status = "Available" if template_name in validation["valid"] else "Missing"
             table.add_row(template_name, status)
         
         console.print(table)
         
         if validation["missing"]:
-            console.print(f"\n⚠️  {len(validation['missing'])} missing templates", style="yellow")
+            console.print(f"\nWarning: {len(validation['missing'])} missing templates", style="yellow")
     else:
         console.print("No templates in this collection", style="yellow")
 

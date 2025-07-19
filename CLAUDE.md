@@ -62,6 +62,7 @@ The codebase follows a modular, layered architecture:
 - **CLI Layer**: `cli.py` - Main Typer-based CLI with rich console output
 - **Template Engine**: `template.py` - Variable substitution and command execution
 - **Storage Layer**: `storage.py` - File-based prompt persistence (YAML/JSON)
+- **Collections**: `collection.py` - Template organization and collection management
 - **API Layer**: `api_client.py` - Multi-provider AI client abstraction
 - **Configuration**: `config.py` - Settings and API key management
 - **Command Execution**: `command_executor.py` - Safe shell command execution with allowlisting
@@ -99,6 +100,9 @@ The codebase follows a modular, layered architecture:
 - Prompts directory: `~/.prompts/`
 - Metadata files: `{name}.yaml` or `{name}.json`
 - Template content: `{name}.txt` (separate from metadata)
+- Collections directory: `~/.prompts/collections/`
+- Collection files: `collections/{name}.yaml` or `collections/{name}.json`
+- Current collection tracking: `.current_collection` file
 - Configuration: `config.json` in prompts directory
 
 ### API Provider Support
@@ -123,10 +127,68 @@ python main.py cmd list
 python main.py cmd template-test "Hello $(whoami)"
 ```
 
+## Template Collections
+
+aix supports organizing templates into collections for better workflow management.
+
+### Collection Workflow
+```bash
+# Create a collection with templates
+aix collection-create "web-dev" --description "Web development prompts" \
+  --template code-review --template explain
+
+# Load a collection as your working set
+aix collection-load web-dev
+
+# Work with collection templates
+aix list                    # Shows only collection templates
+aix run code-review         # Run templates from collection
+aix collection-add new-template  # Add more templates
+
+# Access all templates when needed
+aix list --all              # Show all templates regardless of collection
+aix collection-unload       # Return to working with all templates
+```
+
+### Collection Commands
+- `collection-create <name>` - Create new collection with optional templates
+- `collection-list` - Show all available collections and current status
+- `collection-load <name>` - Load collection as current working set
+- `collection-unload` - Clear current collection, work with all templates
+- `collection-add <template>` - Add template to current collection
+- `collection-remove <template>` - Remove template from current collection
+- `collection-info [name]` - Show detailed collection information
+- `collection-delete <name>` - Delete a collection
+
+### Collection Features
+- **Context-Aware Commands**: `list` and `run` commands are collection-aware
+- **Template Validation**: Collections validate that referenced templates exist
+- **Metadata Support**: Collections support descriptions, tags, and timestamps
+- **Flexible Access**: Can bypass collection filtering with `--all` flag
+- **Persistent State**: Current collection persists across CLI sessions
+
+### Collection Storage
+Collections are stored as metadata files in `~/.prompts/collections/`:
+```yaml
+name: web-dev
+description: Web development prompts
+templates:
+  - code-review
+  - explain
+  - debug-helper
+tags:
+  - development
+  - web
+created_at: 2025-07-19T13:29:41.700001
+updated_at: 2025-07-19T13:35:15.123456
+```
+
 ## Configuration Management
 
 Key configuration files and patterns:
 - `pyproject.toml` - Project metadata, dependencies, tool configuration
 - `~/.prompts/config.json` - Runtime configuration and API keys
 - `~/.prompts/*.yaml` - Individual prompt templates
+- `~/.prompts/collections/*.yaml` - Collection definitions
+- `~/.prompts/.current_collection` - Current collection tracking
 - Tool settings support both CLI flags and persistent configuration
