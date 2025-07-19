@@ -628,6 +628,31 @@ def perform_upgrade():
             console.print("Install uv: curl -Ls https://astral.sh/uv/install.sh | sh", style="yellow")
             return False
         
+        # Get current version
+        from . import __version__ as current_version
+        
+        # Check if already installed via uv tool
+        check_result = subprocess.run([
+            uv_path, "tool", "list"
+        ], capture_output=True, text=True)
+        
+        # Look for aix in the installed tools
+        if check_result.returncode == 0 and "aix" in check_result.stdout:
+            # Try to get installed version info
+            info_result = subprocess.run([
+                uv_path, "tool", "run", "aix", "--version"
+            ], capture_output=True, text=True)
+            
+            if info_result.returncode == 0:
+                # Extract version from output like "aix (AI eXecutor) version 0.2.2"
+                import re
+                version_match = re.search(r'version (\d+\.\d+\.\d+)', info_result.stdout)
+                if version_match:
+                    installed_version = version_match.group(1)
+                    if installed_version == current_version:
+                        console.print(f"aix is already up to date (version {current_version})", style="green")
+                        return True
+        
         console.print("Upgrading aix via uv tool...", style="cyan")
         result = subprocess.run([
             uv_path, "tool", "install", "aix", 
@@ -635,8 +660,7 @@ def perform_upgrade():
         ], capture_output=True, text=True, timeout=120)
         
         if result.returncode == 0:
-            from . import __version__
-            console.print(f"Successfully upgraded aix to version {__version__}", style="green")
+            console.print(f"Successfully upgraded aix to version {current_version}", style="green")
             return True
         else:
             console.print("Upgrade failed", style="red")
@@ -651,9 +675,8 @@ def perform_upgrade():
 def upgrade():
     """Upgrade aix to the latest version from GitHub."""
     success = perform_upgrade()
-    if success:
-        from . import __version__
-        console.print(f"Now running aix version {__version__}", style="blue")
+    # Only show "Now running" message if we actually performed an upgrade
+    # The perform_upgrade function will handle the "already up to date" message
 
 if __name__ == "__main__":
     app()
