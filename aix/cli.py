@@ -300,7 +300,7 @@ def run(
     temperature: Optional[float] = typer.Option(None, "--temperature", help="Temperature for generation"),
     execute: bool = typer.Option(False, "--execute", "-e", help="Execute the prompt via API"),
     enable_commands: bool = typer.Option(False, "--enable-commands", help="Enable command execution in templates"),
-    auto_upgrade: bool = typer.Option(False, "--auto-upgrade", help="Auto-upgrade PromptConsole before execution")
+    auto_upgrade: bool = typer.Option(False, "--auto-upgrade", help="Auto-upgrade aix before execution")
 ):
     """Run a prompt with parameter substitution and optional API execution."""
     storage = PromptStorage()
@@ -314,7 +314,7 @@ def run(
     # Handle auto-upgrade
     config_auto_upgrade = config.get("auto_upgrade", False)
     if auto_upgrade or config_auto_upgrade:
-        console.print("Auto-upgrading PromptConsole...", style="cyan")
+        console.print("Auto-upgrading aix...", style="cyan")
         success = perform_upgrade()
         if not success:
             console.print("Upgrade failed, continuing with current version...", style="yellow")
@@ -628,7 +628,7 @@ def perform_upgrade():
             console.print("Install uv: curl -Ls https://astral.sh/uv/install.sh | sh", style="yellow")
             return False
         
-        console.print("Upgrading PromptConsole via uv tool...", style="cyan")
+        console.print("Upgrading aix via uv tool...", style="cyan")
         result = subprocess.run([
             uv_path, "tool", "install", "aix", 
             "--from", "git+https://github.com/bhadzhiev/prompt.git", "--force"
@@ -636,7 +636,7 @@ def perform_upgrade():
         
         if result.returncode == 0:
             from . import __version__
-            console.print(f"Successfully upgraded PromptConsole to version {__version__}", style="green")
+            console.print(f"Successfully upgraded aix to version {__version__}", style="green")
             return True
         else:
             console.print("Upgrade failed", style="red")
