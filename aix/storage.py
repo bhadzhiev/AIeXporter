@@ -41,6 +41,16 @@ class PromptStorage:
             # Store in main directory (legacy)
             return self.storage_path / f"{name}.txt"
 
+    def _get_xml_template_path(self, name: str, collection: str = None) -> Path:
+        """Get the file path for an XML template."""
+        if collection:
+            # Store in collection directory
+            collection_dir = self.storage_path / "collections" / collection
+            return collection_dir / f"{name}.xml"
+        else:
+            # Store in main directory
+            return self.storage_path / f"{name}.xml"
+
     def save_prompt(self, prompt: PromptTemplate, format: str = "yaml", collection: str = None) -> bool:
         """Save a prompt template to storage using separated files."""
         try:
@@ -73,15 +83,42 @@ class PromptStorage:
             print(f"Error saving prompt: {e}")
             return False
 
+    def save_prompt_xml(self, prompt: PromptTemplate, collection: str = None) -> bool:
+        """Save a prompt template as a single XML file."""
+        try:
+            # Create collection directory if needed
+            if collection:
+                collection_dir = self.storage_path / "collections" / collection
+                collection_dir.mkdir(parents=True, exist_ok=True)
+
+            # Save as single XML file
+            xml_path = self._get_xml_template_path(prompt.name, collection)
+            xml_content = prompt.to_xml()
+            
+            with open(xml_path, "w", encoding="utf-8") as f:
+                f.write(xml_content)
+
+            return True
+        except Exception as e:
+            print(f"Error saving XML prompt: {e}")
+            return False
+
     def get_prompt(self, name: str, collection: str = None) -> Optional[PromptTemplate]:
-        """Load a prompt template from storage using separated files."""
+        """Load a prompt template from storage (supports XML, YAML+TXT formats)."""
         # If collection is specified, try that first
         if collection:
+            # Try XML first, then fallback to YAML+TXT
+            prompt = self._get_prompt_xml_from_location(name, collection)
+            if prompt:
+                return prompt
             prompt = self._get_prompt_from_location(name, collection)
             if prompt:
                 return prompt
         
         # Try main directory (legacy location)
+        prompt = self._get_prompt_xml_from_location(name, None)
+        if prompt:
+            return prompt
         prompt = self._get_prompt_from_location(name, None)
         if prompt:
             return prompt
@@ -92,10 +129,26 @@ class PromptStorage:
             if collections_path.exists():
                 for collection_dir in collections_path.glob("*"):
                     if collection_dir.is_dir():
+                        # Try XML first, then YAML+TXT
+                        prompt = self._get_prompt_xml_from_location(name, collection_dir.name)
+                        if prompt:
+                            return prompt
                         prompt = self._get_prompt_from_location(name, collection_dir.name)
                         if prompt:
                             return prompt
         
+        return None
+
+    def _get_prompt_xml_from_location(self, name: str, collection: str = None) -> Optional[PromptTemplate]:
+        """Load a prompt template from XML file."""
+        xml_path = self._get_xml_template_path(name, collection)
+        if xml_path.exists():
+            try:
+                with open(xml_path, "r", encoding="utf-8") as f:
+                    xml_content = f.read()
+                return PromptTemplate.from_xml(xml_content)
+            except Exception as e:
+                print(f"Error loading XML prompt {name}: {e}")
         return None
 
     def _get_prompt_from_location(self, name: str, collection: str = None) -> Optional[PromptTemplate]:

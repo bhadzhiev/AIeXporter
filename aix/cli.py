@@ -1401,6 +1401,37 @@ def collection_migrate(
         console.print(f"Migration failed: {e}", style="red")
 
 
+@app.command("collection-xml-migrate")
+def collection_xml_migrate(
+    collection_name: str = typer.Argument(None, help="Collection name to migrate to XML (optional - migrates all if not specified)"),
+):
+    """Migrate templates from YAML+TXT to single XML format."""
+    try:
+        manager = CollectionManager()
+        
+        if collection_name:
+            # Migrate specific collection
+            console.print(f"Converting '{collection_name}' templates to XML format...", style="blue")
+            success = manager.migrate_templates_to_xml(collection_name)
+            
+            if success:
+                console.print(f"✅ Successfully converted '{collection_name}' templates to XML", style="green")
+            else:
+                console.print(f"❌ Failed to convert '{collection_name}' templates", style="red")
+        else:
+            # Migrate all collections
+            console.print("Converting all templates to XML format...", style="blue")
+            success = manager.migrate_templates_to_xml()
+            
+            if success:
+                console.print("✅ All templates converted to XML successfully", style="green")
+            else:
+                console.print("⚠️ Some templates failed to convert", style="yellow")
+                
+    except Exception as e:
+        console.print(f"XML migration failed: {e}", style="red")
+
+
 # Provider management commands
 provider_app = typer.Typer(help="Manage custom API providers")
 

@@ -1,5 +1,6 @@
 import re
 import json
+import xml.etree.ElementTree as ET
 from typing import List, Dict, Optional, Tuple
 from dataclasses import dataclass, asdict
 from datetime import datetime
@@ -92,6 +93,97 @@ class PromptTemplate:
     def from_dict(cls, data: Dict) -> "PromptTemplate":
         """Create instance from dictionary."""
         return cls(**data)
+
+    def to_xml(self) -> str:
+        """Convert to XML format."""
+        root = ET.Element("template")
+        
+        # Metadata section
+        metadata = ET.SubElement(root, "metadata")
+        
+        # Basic fields
+        ET.SubElement(metadata, "name").text = self.name
+        ET.SubElement(metadata, "description").text = self.description or ""
+        ET.SubElement(metadata, "created_at").text = self.created_at or ""
+        ET.SubElement(metadata, "updated_at").text = self.updated_at or ""
+        
+        # Tags
+        if self.tags:
+            tags_elem = ET.SubElement(metadata, "tags")
+            for tag in self.tags:
+                ET.SubElement(tags_elem, "tag").text = tag
+        
+        # Variables
+        if self.variables:
+            variables_elem = ET.SubElement(metadata, "variables")
+            for var in self.variables:
+                ET.SubElement(variables_elem, "variable").text = var
+        
+        # Content section using CDATA
+        content = ET.SubElement(root, "content")
+        content.text = self.template
+        
+        # Format and return XML string with pretty printing
+        ET.indent(root, space="  ", level=0)
+        return '<?xml version="1.0" encoding="utf-8"?>\n' + ET.tostring(root, encoding='unicode')
+
+    @classmethod
+    def from_xml(cls, xml_content: str) -> "PromptTemplate":
+        """Create instance from XML content."""
+        try:
+            root = ET.fromstring(xml_content)
+            
+            # Extract metadata
+            metadata = root.find("metadata")
+            if metadata is None:
+                raise ValueError("Invalid XML: missing metadata section")
+            
+            name = metadata.find("name")
+            name = name.text if name is not None else ""
+            
+            description = metadata.find("description")
+            description = description.text if description is not None else ""
+            
+            created_at = metadata.find("created_at")
+            created_at = created_at.text if created_at is not None else None
+            
+            updated_at = metadata.find("updated_at")
+            updated_at = updated_at.text if updated_at is not None else None
+            
+            # Extract tags
+            tags = []
+            tags_elem = metadata.find("tags")
+            if tags_elem is not None:
+                for tag_elem in tags_elem.findall("tag"):
+                    if tag_elem.text:
+                        tags.append(tag_elem.text)
+            
+            # Extract variables
+            variables = []
+            variables_elem = metadata.find("variables")
+            if variables_elem is not None:
+                for var_elem in variables_elem.findall("variable"):
+                    if var_elem.text:
+                        variables.append(var_elem.text)
+            
+            # Extract content
+            content_elem = root.find("content")
+            template = content_elem.text if content_elem is not None else ""
+            
+            return cls(
+                name=name,
+                template=template,
+                description=description,
+                tags=tags,
+                variables=variables,
+                created_at=created_at,
+                updated_at=updated_at
+            )
+            
+        except ET.ParseError as e:
+            raise ValueError(f"Invalid XML format: {e}")
+        except Exception as e:
+            raise ValueError(f"Error parsing XML template: {e}")
 
 
 class TemplateSafeEncoder:

@@ -178,13 +178,22 @@ class CollectionStorage:
                     
                     # Add templates list by scanning directory
                     templates = []
+                    # Scan for XML templates (preferred format)
+                    for file_path in collection_dir.glob("*.xml"):
+                        templates.append(file_path.stem)
+                    
+                    # Scan for YAML templates (legacy format)
                     for file_path in collection_dir.glob("*.yaml"):
                         if file_path.name != ".collection.yaml" and file_path.name != ".collection.json":
-                            templates.append(file_path.stem)
+                            template_name = file_path.stem
+                            if template_name not in templates:  # Don't duplicate XML templates
+                                templates.append(template_name)
+                    
+                    # Scan for JSON templates (legacy format)
                     for file_path in collection_dir.glob("*.json"):
                         if file_path.name != ".collection.yaml" and file_path.name != ".collection.json":
                             template_name = file_path.stem
-                            if template_name not in templates:
+                            if template_name not in templates:  # Don't duplicate XML/YAML templates
                                 templates.append(template_name)
                     
                     data["templates"] = templates
@@ -808,3 +817,97 @@ class CollectionManager:
         
         print(f"Migration complete: {success_count}/{total_count} collections migrated successfully")
         return success_count == total_count
+
+    def migrate_templates_to_xml(self, collection_name: str = None) -> bool:
+        """Migrate templates from YAML+TXT format to single XML format."""
+        try:
+            if collection_name:
+                # Migrate specific collection
+                return self._migrate_collection_templates_to_xml(collection_name)
+            else:
+                # Migrate all collections
+                print("🔄 Migrating all template formats to XML...")
+                collections = self.list_collections()
+                success_count = 0
+                total_count = len(collections)
+                
+                for collection in collections:
+                    if self._migrate_collection_templates_to_xml(collection.name):
+                        success_count += 1
+                    print()  # Add spacing
+                
+                print(f"XML migration complete: {success_count}/{total_count} collections migrated")
+                return success_count == total_count
+                
+        except Exception as e:
+            print(f"Error during XML migration: {e}")
+            return False
+
+    def _migrate_collection_templates_to_xml(self, collection_name: str) -> bool:
+        """Migrate a single collection's templates to XML format."""
+        try:
+            print(f"📁 Migrating '{collection_name}' templates to XML format...")
+            
+            # Get collection
+            collection = self.collection_storage.get_collection(collection_name)
+            if not collection:
+                print(f"Collection '{collection_name}' not found")
+                return False
+            
+            collection_dir = self.collection_storage._get_collection_dir_path(collection_name)
+            if not collection_dir.exists():
+                print(f"Collection '{collection_name}' is not in directory format yet")
+                print("Run 'aix collection-migrate' first to move to directory format")
+                return False
+            
+            migrated_count = 0
+            failed_count = 0
+            
+            # Find all YAML+TXT template pairs
+            yaml_files = list(collection_dir.glob("*.yaml"))
+            yaml_files = [f for f in yaml_files if f.name not in [".collection.yaml", ".collection.json"]]
+            
+            for yaml_file in yaml_files:
+                template_name = yaml_file.stem
+                txt_file = collection_dir / f"{template_name}.txt"
+                xml_file = collection_dir / f"{template_name}.xml"
+                
+                # Skip if XML already exists
+                if xml_file.exists():
+                    print(f"  ⏭️  Template '{template_name}' already has XML format, skipping")
+                    continue
+                
+                try:
+                    # Load template using existing storage method
+                    template = self.prompt_storage.get_prompt(template_name, collection_name)
+                    if template:
+                        # Save as XML
+                        success = self.prompt_storage.save_prompt_xml(template, collection_name)
+                        if success:
+                            # Remove old YAML+TXT files
+                            yaml_file.unlink()
+                            if txt_file.exists():
+                                txt_file.unlink()
+                            print(f"  ✅ Migrated '{template_name}' to XML format")
+                            migrated_count += 1
+                        else:
+                            print(f"  ❌ Failed to save '{template_name}' as XML")
+                            failed_count += 1
+                    else:
+                        print(f"  ❌ Could not load template '{template_name}'")
+                        failed_count += 1
+                        
+                except Exception as e:
+                    print(f"  ❌ Error migrating '{template_name}': {e}")
+                    failed_count += 1
+            
+            if migrated_count > 0:
+                print(f"✅ Successfully migrated {migrated_count} templates to XML format")
+            if failed_count > 0:
+                print(f"⚠️  Failed to migrate {failed_count} templates")
+                
+            return failed_count == 0
+            
+        except Exception as e:
+            print(f"Error migrating collection '{collection_name}' templates: {e}")
+            return False
