@@ -4,6 +4,9 @@ from rich.table import Table
 from rich.panel import Panel
 from typing import Optional, List
 from pathlib import Path
+import os
+import subprocess
+import tempfile
 
 from .storage import PromptStorage
 from .template import PromptTemplate, TemplateSafeEncoder
@@ -12,10 +15,17 @@ from .api_client import get_client, APIResponse
 from .api_keys import setup_api_key
 from .command_executor import CommandExecutor
 from . import commands
+from . import __version__
 from .completion import (
     complete_prompt_names, complete_providers, complete_models, 
     complete_prompt_variables, complete_config_keys, complete_tags, complete_formats
 )
+
+def version_callback(value: bool):
+    if value:
+        console = Console()
+        console.print(f"[bold cyan]aix (AI eXecutor)[/bold cyan] version [bold green]{__version__}[/bold green]")
+        raise typer.Exit()
 
 app = typer.Typer(
     name="promptconsole",
@@ -23,6 +33,18 @@ app = typer.Typer(
     rich_markup_mode="rich"
 )
 console = Console()
+
+@app.callback()
+def main(
+    version: Optional[bool] = typer.Option(
+        None, "--version", "-V", 
+        callback=version_callback, 
+        is_eager=True,
+        help="Show version and exit"
+    )
+):
+    """AI eXecutor (aix) - Your AI butler that lives in the terminal."""
+    pass
 
 @app.command()
 def create(
@@ -54,27 +76,71 @@ def create(
         console.print(f"Failed to create prompt '{name}'", style="red")
 
 @app.command()
-def list():
+def list(
+    verbose: bool = typer.Option(False, "--verbose", "-v", help="Show detailed information"),
+    tag: Optional[str] = typer.Option(None, "--tag", "-t", help="Filter by tag", autocompletion=complete_tags)
+):
     """List all saved prompts."""
     storage = PromptStorage()
     prompts = storage.list_prompts()
+    
+    # Filter by tag if specified
+    if tag:
+        prompts = [p for p in prompts if tag in p.tags]
+        if not prompts:
+            console.print(f"No prompts found with tag '{tag}'", style="yellow")
+            return
     
     if not prompts:
         console.print("No prompts found", style="yellow")
         return
     
-    table = Table(title="Saved Prompts")
-    table.add_column("Name", style="cyan", no_wrap=True)
-    table.add_column("Variables", style="magenta")
-    table.add_column("Tags", style="green")
-    table.add_column("Description", style="dim")
-    
-    for prompt in prompts:
-        variables = ", ".join(prompt.variables) if prompt.variables else "None"
-        tags = ", ".join(prompt.tags) if prompt.tags else "None"
-        table.add_row(prompt.name, variables, tags, prompt.description[:50] + "..." if len(prompt.description) > 50 else prompt.description)
-    
-    console.print(table)
+    if verbose:
+        # Verbose mode: show detailed information for each prompt
+        for i, prompt in enumerate(prompts):
+            if i > 0:
+                console.print()  # Add spacing between prompts
+            
+            panel_content = f"""[bold cyan]Name:[/bold cyan] {prompt.name}
+[bold cyan]Description:[/bold cyan] {prompt.description or 'No description'}
+[bold cyan]Variables:[/bold cyan] {', '.join(prompt.variables) if prompt.variables else 'None'}
+[bold cyan]Tags:[/bold cyan] {', '.join(prompt.tags) if prompt.tags else 'None'}
+[bold cyan]Created:[/bold cyan] {prompt.created_at}
+[bold cyan]Updated:[/bold cyan] {prompt.updated_at}
+
+[bold cyan]Template:[/bold cyan]
+{prompt.template[:200]}{'...' if len(prompt.template) > 200 else ''}"""
+            
+            console.print(Panel(panel_content, title=f"Prompt {i+1}/{len(prompts)}", expand=False))
+    else:
+        # Standard table view
+        title = "Saved Prompts"
+        if tag:
+            title += f" (filtered by tag: {tag})"
+        
+        table = Table(title=title)
+        table.add_column("Name", style="cyan", no_wrap=True)
+        table.add_column("Variables", style="magenta")
+        table.add_column("Tags", style="green")
+        table.add_column("Description", style="dim")
+        
+        for prompt in prompts:
+            variables = ", ".join(prompt.variables) if prompt.variables else "None"
+            tags = ", ".join(prompt.tags) if prompt.tags else "None"
+            table.add_row(
+                prompt.name, 
+                variables, 
+                tags, 
+                prompt.description[:50] + "..." if len(prompt.description) > 50 else prompt.description
+            )
+        
+        console.print(table)
+        
+        # Show summary
+        if tag:
+            console.print(f"\n[dim]Found {len(prompts)} prompt(s) with tag '{tag}'[/dim]")
+        else:
+            console.print(f"\n[dim]Total: {len(prompts)} prompt(s)[/dim]")
 
 @app.command()
 def show(
@@ -97,6 +163,105 @@ def show(
 {prompt.template}"""
     
     console.print(Panel(panel_content, title="Prompt Details", expand=False))
+
+@app.command()
+def edit(
+    name: str = typer.Argument(..., help="Name of the prompt to edit", autocompletion=complete_prompt_names)
+):
+    """Edit a prompt template using your preferred editor."""
+    storage = PromptStorage()
+    config = Config()
+    prompt = storage.get_prompt(name)
+    
+    if not prompt:
+        console.print(f"Prompt '{name}' not found", style="red")
+        return
+    
+    # Get editor from environment or config
+    editor = os.environ.get('EDITOR') or config.get('editor', 'nano')
+    
+    # Create a temporary file with the current prompt content
+    with tempfile.NamedTemporaryFile(mode='w+', suffix='.txt', delete=False) as tmp_file:
+        # Write current prompt content with metadata as comments
+        tmp_file.write(f"# Prompt: {prompt.name}\n")
+        tmp_file.write(f"# Description: {prompt.description}\n")
+        tmp_file.write(f"# Tags: {', '.join(prompt.tags) if prompt.tags else 'None'}\n")
+        tmp_file.write(f"# Variables: {', '.join(prompt.variables) if prompt.variables else 'None'}\n")
+        tmp_file.write("# Edit the template below (lines starting with # will be ignored)\n")
+        tmp_file.write("#" + "="*60 + "\n\n")
+        tmp_file.write(prompt.template)
+        tmp_path = tmp_file.name
+    
+    try:
+        # Open editor
+        console.print(f"Opening '{name}' in {editor}...", style="cyan")
+        result = subprocess.run([editor, tmp_path], check=True)
+        
+        # Read the edited content
+        with open(tmp_path, 'r') as f:
+            edited_content = f.read()
+        
+        # Extract the template content (skip comment lines)
+        lines = edited_content.split('\n')
+        template_lines = []
+        for line in lines:
+            if not line.strip().startswith('#'):
+                template_lines.append(line)
+        
+        new_template = '\n'.join(template_lines).strip()
+        
+        if new_template == prompt.template:
+            console.print("No changes made to the prompt", style="yellow")
+            return
+        
+        # Update the prompt with new template
+        updated_prompt = PromptTemplate(
+            name=prompt.name,
+            template=new_template,
+            description=prompt.description,
+            tags=prompt.tags,
+            variables=PromptTemplate.extract_variables(new_template),
+            created_at=prompt.created_at
+        )
+        
+        # Determine format from existing file
+        format = "yaml"
+        for ext in ["yaml", "json"]:
+            if storage._get_prompt_path(name, ext).exists():
+                format = ext
+                break
+        
+        success = storage.save_prompt(updated_prompt, format)
+        if success:
+            console.print(f"Prompt '{name}' updated successfully!", style="green")
+            
+            # Show what changed
+            old_vars = set(prompt.variables)
+            new_vars = set(updated_prompt.variables)
+            if old_vars != new_vars:
+                added = new_vars - old_vars
+                removed = old_vars - new_vars
+                if added:
+                    console.print(f"Added variables: {', '.join(added)}", style="green")
+                if removed:
+                    console.print(f"Removed variables: {', '.join(removed)}", style="yellow")
+        else:
+            console.print(f"Failed to update prompt '{name}'", style="red")
+            
+    except subprocess.CalledProcessError:
+        console.print(f"Editor '{editor}' exited with error", style="red")
+    except FileNotFoundError:
+        console.print(f"Editor '{editor}' not found. Set a different editor:", style="red")
+        console.print(f"  export EDITOR=nano", style="yellow")
+        console.print(f"  aix config editor vim", style="yellow")
+    except KeyboardInterrupt:
+        console.print("\nEdit cancelled", style="yellow")
+    finally:
+        # Clean up temporary file
+        try:
+            os.unlink(tmp_path)
+        except OSError:
+            pass
 
 @app.command()
 def delete(
@@ -164,11 +329,24 @@ def run(
             key, value = param.split("=", 1)
             param_dict[key.strip()] = value.strip()
     
-    # Check for missing variables
+    # Check for missing variables and prompt interactively
     missing_vars = set(prompt.variables) - set(param_dict.keys())
     if missing_vars:
-        console.print(f"Missing required variables: {', '.join(missing_vars)}", style="red")
-        return
+        console.print(f"Missing variables: {', '.join(missing_vars)}", style="yellow")
+        
+        # Interactive prompting for missing variables
+        if not dry_run:  # Only prompt in interactive mode, not for dry runs
+            console.print("Please provide values for missing variables:", style="cyan")
+            for var in sorted(missing_vars):
+                try:
+                    value = typer.prompt(f"  {var}")
+                    param_dict[var] = value
+                except typer.Abort:
+                    console.print("\nOperation cancelled", style="yellow")
+                    return
+        else:
+            console.print(f"Use --param {list(missing_vars)[0]}=value to provide missing variables", style="red")
+            return
     
     # Generate the final prompt
     if enable_commands:
@@ -204,13 +382,21 @@ def run(
     
     if not api_key:
         console.print(f"No API key found for provider '{selected_provider}'", style="red")
-        console.print(f"💡 Set it up with: python main.py api-key {selected_provider}", style="yellow")
+        console.print(f"💡 Set it up with: aix api-key {selected_provider}", style="yellow")
+        
+        # Interactive API key setup
         if typer.confirm("Would you like to set it up now?"):
             if setup_api_key(selected_provider):
+                # Reload config to get the new API key
+                config = Config()
                 api_key = config.get_api_key(selected_provider)
+                console.print(f"✅ API key for {selected_provider} configured successfully!", style="green")
             else:
+                console.print("❌ Failed to set up API key", style="red")
                 return
         else:
+            console.print("Operation cancelled. You can set up API keys later with:", style="yellow")
+            console.print(f"  aix api-key {selected_provider}", style="dim")
             return
     
     try:
@@ -266,12 +452,53 @@ def run(
 def config(
     key: Optional[str] = typer.Argument(None, help="Configuration key to get/set", autocompletion=complete_config_keys),
     value: Optional[str] = typer.Argument(None, help="Value to set"),
-    list_all: bool = typer.Option(False, "--list", "-l", help="List all configuration")
+    list_all: bool = typer.Option(False, "--list", "-l", help="List all configuration"),
+    get: Optional[str] = typer.Option(None, "--get", "-g", help="Get configuration value", autocompletion=complete_config_keys),
+    set_pair: Optional[str] = typer.Option(None, "--set", help="Set configuration key=value"),
+    reset: bool = typer.Option(False, "--reset", help="Reset configuration to defaults")
 ):
     """Manage configuration settings."""
     config_manager = Config()
     
-    if list_all or (not key and not value):
+    # Handle reset option
+    if reset:
+        if typer.confirm("Are you sure you want to reset all configuration to defaults? This will remove all settings including API keys."):
+            success = config_manager.reset()
+            if success:
+                console.print("Configuration reset to defaults", style="green")
+            else:
+                console.print("Failed to reset configuration", style="red")
+        else:
+            console.print("Reset cancelled", style="yellow")
+        return
+    
+    # Handle --get option
+    if get:
+        val = config_manager.get(get)
+        if val is not None:
+            # Mask API keys for security
+            if "api_key" in get.lower() and isinstance(val, str):
+                if len(val) > 8:
+                    val = f"{val[:4]}{'*' * (len(val) - 8)}{val[-4:]}"
+                else:
+                    val = "*" * len(val)
+            console.print(f"[cyan]{get}[/cyan]: {val}")
+        else:
+            console.print(f"Configuration key '{get}' not found", style="red")
+        return
+    
+    # Handle --set option
+    if set_pair:
+        if "=" not in set_pair:
+            console.print("--set requires key=value format. Example: aix config --set editor=vim", style="red")
+            return
+        set_key, set_value = set_pair.split("=", 1)
+        config_manager.set(set_key.strip(), set_value.strip())
+        console.print(f"Set [cyan]{set_key.strip()}[/cyan] = [magenta]{set_value.strip()}[/magenta]", style="green")
+        return
+    
+    # Handle list or traditional positional arguments
+    if list_all or (not key and not value and not get and not set_pair):
         settings = config_manager.get_all()
         if not settings:
             console.print("📝 No configuration found", style="yellow")
@@ -297,6 +524,7 @@ def config(
         console.print(table)
         return
     
+    # Handle traditional positional arguments (backward compatibility)
     if key and not value:
         # Get value
         val = config_manager.get(key)
@@ -313,7 +541,7 @@ def config(
     elif key and value:
         # Set value
         config_manager.set(key, value)
-        console.print(f"Set {key} = {value}", style="green")
+        console.print(f"Set [cyan]{key}[/cyan] = [magenta]{value}[/magenta]", style="green")
     else:
         console.print("Please provide a key or use --list", style="red")
 
