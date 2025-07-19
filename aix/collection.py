@@ -2,6 +2,7 @@
 
 import json
 import yaml
+import os
 from pathlib import Path
 from typing import List, Optional, Dict, Any, Set
 from dataclasses import dataclass, asdict
@@ -59,9 +60,17 @@ class CollectionStorage:
     
     def __init__(self, storage_path: Optional[Path] = None):
         """Initialize collection storage."""
-        self.storage_path = storage_path or Path.home() / ".prompts"
+        if storage_path:
+            self.storage_path = storage_path
+        else:
+            # Check environment variable first, then fall back to default
+            env_path = os.environ.get('AIX_STORAGE_PATH')
+            if env_path:
+                self.storage_path = Path(env_path)
+            else:
+                self.storage_path = Path.home() / ".prompts"
         self.collections_path = self.storage_path / "collections"
-        self.collections_path.mkdir(exist_ok=True)
+        self.collections_path.mkdir(parents=True, exist_ok=True)
         
         # File to track the currently loaded collection
         self.current_collection_file = self.storage_path / ".current_collection"
@@ -436,7 +445,11 @@ class CollectionManager:
                     
                     # Extract bundle
                     with tarfile.open(import_path, "r:gz") as tar:
-                        tar.extractall(temp_path)
+                        # Use data_filter for Python 3.12+ to avoid deprecation warning
+                        if hasattr(tarfile, 'data_filter'):
+                            tar.extractall(temp_path, filter=tarfile.data_filter)
+                        else:
+                            tar.extractall(temp_path)
                     
                     # Find bundle directory
                     bundle_dirs = [d for d in temp_path.iterdir() if d.is_dir()]

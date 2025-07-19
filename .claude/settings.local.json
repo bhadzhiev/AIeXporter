@@ -29,7 +29,20 @@
       "Bash(cz bump:*)",
       "Bash(git tag:*)",
       "Bash(chmod:*)",
-      "Bash(tar:*)"
+      "Bash(tar:*)",
+      "Bash(AIX_STORAGE_PATH=./temp_test/.prompts python -m aix.cli collection-load my-collection)",
+      "Bash(AIX_STORAGE_PATH=./temp_test/.prompts python -m aix.cli list)",
+      "Bash(AIX_STORAGE_PATH=./temp_test/.prompts python -m aix.cli run nonexistent)",
+      "Bash(echo:*)",
+      "Bash(pytest:*)",
+      "Bash(AIX_STORAGE_PATH=./test_debug/.prompts python -m aix.cli collection-create test-collection --description \"Test collection\" --template prompt1 --template prompt2)",
+      "Bash(uv pip install:*)",
+      "Bash(cz info:*)",
+      "Bash(pre-commit:*)",
+      "Bash(black:*)",
+      "Bash(isort:*)",
+      "Bash(flake8:*)",
+      "Bash(.git/hooks/pre-push)"
     ],
     "deny": []
   }

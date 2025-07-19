@@ -4,7 +4,7 @@
 
 ### 1. **Set up remote repository**
 ```bash
-git remote add publish https://github.com/bhadzhiev/prompt.git
+git remote add publish https://github.com/bhadzhiev/AIeXporter.git
 ```
 
 ### 2. **Push code to GitHub**
@@ -22,10 +22,10 @@ git push publish v0.1.0
 ### 4. Install from GitHub (for users)
 ```bash
 # Users can install directly from GitHub
-uv tool install aix --from git+https://github.com/bhadzhiev/prompt.git
+uv tool install aix --from git+https://github.com/bhadzhiev/AIeXporter.git
 
 # Or via pip
-pip install git+https://github.com/bhadzhiev/prompt.git
+pip install git+https://github.com/bhadzhiev/AIeXporter.git
 ```
 
 ## Manual Push Commands
@@ -35,10 +35,10 @@ If you have authentication issues, use these commands:
 ```bash
 # Using GitHub CLI (recommended)
 gh auth login
-git push https://$(gh auth token)@github.com/bhadzhiev/aix.git master:main
+git push https://$(gh auth token)@github.com/bhadzhiev/AIeXporter.git master:main
 
 # Using personal access token
-git push https://YOUR_TOKEN@github.com/bhadzhiev/aix.git master:main
+git push https://YOUR_TOKEN@github.com/bhadzhiev/AIeXporter.git master:main
 ```
 
 ## Ready for Distribution
@@ -62,7 +62,7 @@ uv tool install aix
 pip install aix
 
 # From GitHub directly
-uv tool install aix --from git+https://github.com/bhadzhiev/prompt.git
+uv tool install aix --from git+https://github.com/bhadzhiev/AIeXporter.git
 ```
 
 ## Next Steps

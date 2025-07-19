@@ -1,5 +1,6 @@
 import json
 import yaml
+import os
 from pathlib import Path
 from typing import List, Optional, Dict, Any
 from .template import PromptTemplate
@@ -7,7 +8,15 @@ from .template import PromptTemplate
 class PromptStorage:
     def __init__(self, storage_path: Optional[Path] = None):
         """Initialize storage with custom path or default ~/.prompts"""
-        self.storage_path = storage_path or Path.home() / ".prompts"
+        if storage_path:
+            self.storage_path = storage_path
+        else:
+            # Check environment variable first, then fall back to default
+            env_path = os.environ.get('AIX_STORAGE_PATH')
+            if env_path:
+                self.storage_path = Path(env_path)
+            else:
+                self.storage_path = Path.home() / ".prompts"
         self.storage_path.mkdir(exist_ok=True)
     
     def _get_prompt_path(self, name: str, format: str = "yaml") -> Path:

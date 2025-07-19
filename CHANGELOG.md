@@ -1,7 +1,10 @@
-## v0.2.7 (2025-07-19)
+## v0.2.14 (2025-07-19)
 
 ### Feat
 
+- add comprehensive test suite with 103 tests and 53% coverage
+- implement AIX_STORAGE_PATH environment variable support for testing
+- add pre-push git hook for automatic version bumping with commitizen
 - always show generated prompt before API execution
 - implement collection import/export functionality
 - implement comprehensive template collections feature
@@ -10,13 +13,30 @@
 
 ### Fix
 
+- fix deprecation warning in tar extraction by adding data_filter for Python 3.12+
+- fix all failing CLI integration tests (7 failed → 0 failed)
+- fix collection directory creation with proper parent directory handling
+- correct repository URLs in documentation from prompt.git to AIeXporter.git
+- update git pre-commit hook to handle missing setup.py
 - update upgrade messages to use 'aix' branding consistently
 - sync __init__.py version with pyproject.toml (0.2.2)
 - update __init__.py version to match pyproject.toml (0.2.1)
 
+### Test
+
+- add comprehensive CLI integration test suite
+- fix string matching issues in test assertions
+- improve test isolation with proper environment variable handling
+- add test coverage for all core functionality
+
 ### Refactor
 
 - reorganize repository structure and clean up legacy files
+
+### Chore
+
+- update development dependencies (pytest, black, isort, flake8, mypy)
+- add development tools configuration in pyproject.toml
 
 ## v0.2.1 (2025-07-19)
 

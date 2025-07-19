@@ -1,11 +1,20 @@
 import json
+import os
 from pathlib import Path
 from typing import Any, Dict, Optional
 
 class Config:
     def __init__(self, config_path: Optional[Path] = None):
         """Initialize configuration manager."""
-        self.config_path = config_path or Path.home() / ".prompts" / "config.json"
+        if config_path:
+            self.config_path = config_path
+        else:
+            # Check environment variable first for storage path
+            env_path = os.environ.get('AIX_STORAGE_PATH')
+            if env_path:
+                self.config_path = Path(env_path) / "config.json"
+            else:
+                self.config_path = Path.home() / ".prompts" / "config.json"
         self.config_path.parent.mkdir(exist_ok=True)
         self._settings = self._load_config()
     
@@ -76,6 +85,11 @@ class Config:
     
     def get_storage_path(self) -> Path:
         """Get the configured storage path."""
+        # Check environment variable first
+        env_path = os.environ.get('AIX_STORAGE_PATH')
+        if env_path:
+            return Path(env_path)
+        
         path_str = self.get("storage_path", str(Path.home() / ".prompts"))
         return Path(path_str)
     
