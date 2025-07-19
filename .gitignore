@@ -85,3 +85,10 @@ dmypy.json
 .pytype/
 cython_debug/
 !/.projenrc.py
+
+# Local prompt storage for testing
+.prompts/
+
+# IDE files
+.idea/
+.vscode/
