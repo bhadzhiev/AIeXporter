@@ -1,17 +1,22 @@
-## v0.2.2 (2025-07-19)
+## v0.2.7 (2025-07-19)
 
 ### Feat
 
-- **Template Collections**: Complete collection management system with create, load, add, remove, import/export
-- **Collection Import/Export**: Full bundle support with templates and metadata preservation
-- **Repository Migration**: Moved to AIeXporter repository while preserving all aix commands
-- **Upgrade Improvements**: Show 'already up to date' message and display version after upgrade
-- **Documentation**: Remove emojis from CLI and docs, add comprehensive collections documentation
+- always show generated prompt before API execution
+- implement collection import/export functionality
+- implement comprehensive template collections feature
+- show 'already up to date' message when no upgrade is needed
+- display version after successful upgrade command
 
 ### Fix
 
-- update __init__.py version to match pyproject.toml (0.2.1)
 - update upgrade messages to use 'aix' branding consistently
+- sync __init__.py version with pyproject.toml (0.2.2)
+- update __init__.py version to match pyproject.toml (0.2.1)
+
+### Refactor
+
+- reorganize repository structure and clean up legacy files
 
 ## v0.2.1 (2025-07-19)
 
