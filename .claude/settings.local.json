@@ -42,7 +42,10 @@
       "Bash(black:*)",
       "Bash(isort:*)",
       "Bash(flake8:*)",
-      "Bash(.git/hooks/pre-push)"
+      "Bash(.git/hooks/pre-push)",
+      "Bash(gh auth:*)",
+      "Bash(gh release create:*)",
+      "Bash(gh release:*)"
     ],
     "deny": []
   }

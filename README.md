@@ -70,7 +70,7 @@ aix run roast --param language=python --param code="print('hello world')" --dry-
 aix run roast --param language=python --param code="print('hello world')" --execute
 ```
 
-## Features that will make you go "Ooooh"
+## Features that will make you go "Ooooh" ✨
 
 | Feature | Description | Why it's cool |
 |---------|-------------|---------------|
