@@ -46,7 +46,8 @@
       "Bash(gh auth:*)",
       "Bash(gh release create:*)",
       "Bash(gh release:*)",
-      "Bash(aix:*)"
+      "Bash(aix:*)",
+      "Bash(uv tool:*)"
     ],
     "deny": []
   }
