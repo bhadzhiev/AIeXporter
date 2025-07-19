@@ -1,3 +1,9 @@
+## v0.5.2 (2025-07-20)
+
+### Fix
+
+- remove flawed version check in upgrade command
+
 ## v0.5.1 (2025-07-20)
 
 ### Fix
