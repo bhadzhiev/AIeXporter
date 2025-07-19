@@ -975,6 +975,81 @@ def collection_delete(
     else:
         console.print(f"Failed to delete collection '{name}'", style="red")
 
+@app.command("collection-export")
+def collection_export(
+    name: str = typer.Argument(..., help="Name of the collection to export"),
+    output: Path = typer.Option(".", "--output", "-o", help="Output directory or file path"),
+    include_templates: bool = typer.Option(True, "--templates/--no-templates", help="Include templates in export"),
+    format: str = typer.Option("yaml", "--format", "-f", help="Export format (yaml or json)")
+):
+    """Export a collection to a file or bundle."""
+    console = Console()
+    manager = CollectionManager()
+    
+    if not manager.collection_storage.collection_exists(name):
+        console.print(f"Collection '{name}' not found", style="red")
+        return
+    
+    output_path = Path(output)
+    
+    try:
+        success = manager.export_collection(name, output_path, include_templates, format)
+        if success:
+            if include_templates:
+                bundle_file = output_path / f"{name}-bundle.tar.gz"
+                console.print(f"Collection '{name}' exported as bundle to: {bundle_file}", style="green")
+                console.print("Bundle includes collection metadata and all templates", style="dim")
+            else:
+                collection_file = output_path / f"{name}.{format}"
+                console.print(f"Collection '{name}' metadata exported to: {collection_file}", style="green")
+                console.print("Note: Templates not included (use --templates to include)", style="yellow")
+        else:
+            console.print(f"Failed to export collection '{name}'", style="red")
+    except Exception as e:
+        console.print(f"Export failed: {e}", style="red")
+
+@app.command("collection-import")
+def collection_import(
+    path: Path = typer.Argument(..., help="Path to collection file or bundle to import"),
+    overwrite: bool = typer.Option(False, "--overwrite", help="Overwrite existing collection and templates")
+):
+    """Import a collection from a file or bundle."""
+    console = Console()
+    manager = CollectionManager()
+    
+    import_path = Path(path)
+    if not import_path.exists():
+        console.print(f"Import file not found: {import_path}", style="red")
+        return
+    
+    console.print(f"Importing collection from: {import_path}", style="cyan")
+    
+    try:
+        result = manager.import_collection(import_path, overwrite)
+        
+        if result["success"]:
+            console.print(f"Successfully imported collection '{result['collection_name']}'", style="green")
+            
+            if result["imported_templates"]:
+                console.print(f"Imported {len(result['imported_templates'])} templates:", style="green")
+                for template in result["imported_templates"]:
+                    console.print(f"  - {template}")
+            
+            if result["skipped_templates"]:
+                console.print(f"Skipped {len(result['skipped_templates'])} existing templates:", style="yellow")
+                for template in result["skipped_templates"]:
+                    console.print(f"  - {template}")
+                console.print("Use --overwrite to replace existing templates", style="dim")
+            
+            console.print(f"\nUse 'aix collection-load {result['collection_name']}' to work with this collection", style="cyan")
+        else:
+            console.print("Import failed:", style="red")
+            for error in result["errors"]:
+                console.print(f"  - {error}", style="red")
+                
+    except Exception as e:
+        console.print(f"Import failed: {e}", style="red")
+
 @app.command()
 def upgrade():
     """Upgrade aix to the latest version from GitHub."""

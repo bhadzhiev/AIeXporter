@@ -317,3 +317,244 @@ class CollectionManager:
             return self.collection_storage.save_collection(collection)
         
         return False
+    
+    def export_collection(self, collection_name: str, export_path: Path, include_templates: bool = True, format: str = "yaml") -> bool:
+        """Export a collection and optionally its templates to a directory or file."""
+        import shutil
+        import tarfile
+        from datetime import datetime
+        
+        collection = self.collection_storage.get_collection(collection_name)
+        if not collection:
+            return False
+            
+        export_path = Path(export_path)
+        
+        if include_templates:
+            # Create bundle directory
+            bundle_dir = export_path / f"{collection_name}-bundle"
+            bundle_dir.mkdir(parents=True, exist_ok=True)
+            
+            # Export collection metadata
+            collection_file = bundle_dir / f"collection.{format}"
+            if format == "yaml":
+                with open(collection_file, 'w') as f:
+                    yaml.dump(collection.to_dict(), f, default_flow_style=False, sort_keys=False)
+            else:  # json
+                with open(collection_file, 'w') as f:
+                    json.dump(collection.to_dict(), f, indent=2)
+            
+            # Export templates
+            templates_dir = bundle_dir / "templates"
+            templates_dir.mkdir(exist_ok=True)
+            
+            exported_templates = []
+            missing_templates = []
+            
+            for template_name in collection.templates:
+                template = self.prompt_storage.get_prompt(template_name)
+                if template:
+                    # Export template metadata
+                    template_meta_file = templates_dir / f"{template_name}.{format}"
+                    template_data = template.to_dict()
+                    template_data.pop('template', None)  # Remove content, store separately
+                    template_data['template_file'] = f"{template_name}.txt"
+                    
+                    if format == "yaml":
+                        with open(template_meta_file, 'w') as f:
+                            yaml.dump(template_data, f, default_flow_style=False, sort_keys=False)
+                    else:  # json
+                        with open(template_meta_file, 'w') as f:
+                            json.dump(template_data, f, indent=2)
+                    
+                    # Export template content
+                    template_content_file = templates_dir / f"{template_name}.txt"
+                    with open(template_content_file, 'w', encoding='utf-8') as f:
+                        f.write(template.template)
+                    
+                    exported_templates.append(template_name)
+                else:
+                    missing_templates.append(template_name)
+            
+            # Create manifest
+            manifest = {
+                "collection_name": collection_name,
+                "exported_at": datetime.now().isoformat(),
+                "format": format,
+                "exported_templates": exported_templates,
+                "missing_templates": missing_templates,
+                "total_templates": len(collection.templates)
+            }
+            
+            with open(bundle_dir / "manifest.json", 'w') as f:
+                json.dump(manifest, f, indent=2)
+            
+            # Create tar.gz archive
+            archive_path = export_path / f"{collection_name}-bundle.tar.gz"
+            with tarfile.open(archive_path, "w:gz") as tar:
+                tar.add(bundle_dir, arcname=f"{collection_name}-bundle")
+            
+            # Clean up temporary directory
+            shutil.rmtree(bundle_dir)
+            
+            return True
+        else:
+            # Export only collection metadata
+            collection_file = export_path / f"{collection_name}.{format}"
+            collection_file.parent.mkdir(parents=True, exist_ok=True)
+            
+            if format == "yaml":
+                with open(collection_file, 'w') as f:
+                    yaml.dump(collection.to_dict(), f, default_flow_style=False, sort_keys=False)
+            else:  # json
+                with open(collection_file, 'w') as f:
+                    json.dump(collection.to_dict(), f, indent=2)
+            
+            return True
+    
+    def import_collection(self, import_path: Path, overwrite: bool = False) -> Dict[str, Any]:
+        """Import a collection from a file or bundle."""
+        import tarfile
+        import tempfile
+        import shutil
+        from datetime import datetime
+        
+        import_path = Path(import_path)
+        result = {
+            "success": False,
+            "collection_name": None,
+            "imported_templates": [],
+            "skipped_templates": [],
+            "errors": []
+        }
+        
+        try:
+            if import_path.suffix == ".gz" and import_path.name.endswith(".tar.gz"):
+                # Import from bundle
+                with tempfile.TemporaryDirectory() as temp_dir:
+                    temp_path = Path(temp_dir)
+                    
+                    # Extract bundle
+                    with tarfile.open(import_path, "r:gz") as tar:
+                        tar.extractall(temp_path)
+                    
+                    # Find bundle directory
+                    bundle_dirs = [d for d in temp_path.iterdir() if d.is_dir()]
+                    if not bundle_dirs:
+                        result["errors"].append("No bundle directory found in archive")
+                        return result
+                    
+                    bundle_dir = bundle_dirs[0]
+                    
+                    # Read manifest
+                    manifest_file = bundle_dir / "manifest.json"
+                    if manifest_file.exists():
+                        with open(manifest_file, 'r') as f:
+                            manifest = json.load(f)
+                        result["collection_name"] = manifest["collection_name"]
+                    
+                    # Import collection
+                    collection_files = list(bundle_dir.glob("collection.*"))
+                    if not collection_files:
+                        result["errors"].append("No collection file found in bundle")
+                        return result
+                    
+                    collection_file = collection_files[0]
+                    collection_data = self._load_collection_file(collection_file)
+                    if not collection_data:
+                        result["errors"].append("Failed to load collection metadata")
+                        return result
+                    
+                    collection_name = collection_data["name"]
+                    
+                    # Check if collection exists
+                    if self.collection_storage.collection_exists(collection_name) and not overwrite:
+                        result["errors"].append(f"Collection '{collection_name}' already exists (use --overwrite)")
+                        return result
+                    
+                    # Import templates
+                    templates_dir = bundle_dir / "templates"
+                    if templates_dir.exists():
+                        for template_meta_file in templates_dir.glob("*.yaml") or templates_dir.glob("*.json"):
+                            if template_meta_file.stem == "manifest":
+                                continue
+                                
+                            template_name = template_meta_file.stem
+                            
+                            # Check if template exists
+                            if self.prompt_storage.prompt_exists(template_name) and not overwrite:
+                                result["skipped_templates"].append(template_name)
+                                continue
+                            
+                            # Load template metadata
+                            template_data = self._load_collection_file(template_meta_file)
+                            if not template_data:
+                                result["errors"].append(f"Failed to load template metadata: {template_name}")
+                                continue
+                            
+                            # Load template content
+                            template_content_file = templates_dir / f"{template_name}.txt"
+                            if template_content_file.exists():
+                                with open(template_content_file, 'r', encoding='utf-8') as f:
+                                    template_content = f.read()
+                                template_data['template'] = template_content
+                            
+                            # Create and save template
+                            try:
+                                template = PromptTemplate.from_dict(template_data)
+                                if self.prompt_storage.save_prompt(template):
+                                    result["imported_templates"].append(template_name)
+                                else:
+                                    result["errors"].append(f"Failed to save template: {template_name}")
+                            except Exception as e:
+                                result["errors"].append(f"Failed to create template {template_name}: {e}")
+                    
+                    # Save collection
+                    collection_data["updated_at"] = datetime.now().isoformat()
+                    collection = Collection.from_dict(collection_data)
+                    if self.collection_storage.save_collection(collection):
+                        result["success"] = True
+                        result["collection_name"] = collection_name
+                    else:
+                        result["errors"].append("Failed to save collection")
+            
+            else:
+                # Import collection metadata only
+                collection_data = self._load_collection_file(import_path)
+                if not collection_data:
+                    result["errors"].append("Failed to load collection file")
+                    return result
+                
+                collection_name = collection_data["name"]
+                
+                # Check if collection exists
+                if self.collection_storage.collection_exists(collection_name) and not overwrite:
+                    result["errors"].append(f"Collection '{collection_name}' already exists (use --overwrite)")
+                    return result
+                
+                # Save collection
+                collection_data["updated_at"] = datetime.now().isoformat()
+                collection = Collection.from_dict(collection_data)
+                if self.collection_storage.save_collection(collection):
+                    result["success"] = True
+                    result["collection_name"] = collection_name
+                else:
+                    result["errors"].append("Failed to save collection")
+        
+        except Exception as e:
+            result["errors"].append(f"Import failed: {e}")
+        
+        return result
+    
+    def _load_collection_file(self, file_path: Path) -> Optional[Dict[str, Any]]:
+        """Helper to load collection data from YAML or JSON file."""
+        try:
+            if file_path.suffix in ['.yaml', '.yml']:
+                with open(file_path, 'r') as f:
+                    return yaml.safe_load(f)
+            elif file_path.suffix == '.json':
+                with open(file_path, 'r') as f:
+                    return json.load(f)
+        except Exception:
+            return None
+        return None

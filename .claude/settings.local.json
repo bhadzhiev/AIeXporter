@@ -28,7 +28,8 @@
       "Bash(cz changelog:*)",
       "Bash(cz bump:*)",
       "Bash(git tag:*)",
-      "Bash(chmod:*)"
+      "Bash(chmod:*)",
+      "Bash(tar:*)"
     ],
     "deny": []
   }
