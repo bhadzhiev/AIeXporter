@@ -1,6 +1,6 @@
 import typer
 from rich.console import Console
-from promptconsole.cli import app
+from aix.cli import app
 
 console = Console()
 

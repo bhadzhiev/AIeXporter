@@ -32,7 +32,7 @@ dependencies = [
 ]
 
 [project.scripts]
-aix = "promptconsole.cli:app"
+aix = "aix.cli:app"
 
 [project.optional-dependencies]
 dev = [
@@ -62,4 +62,4 @@ disallow_untyped_defs = true
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py", "*_test.py"]
-addopts = "--cov=promptconsole --cov-report=term-missing"
+addopts = "--cov=aix --cov-report=term-missing"

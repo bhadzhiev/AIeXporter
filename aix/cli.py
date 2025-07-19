@@ -28,7 +28,7 @@ def version_callback(value: bool):
         raise typer.Exit()
 
 app = typer.Typer(
-    name="promptconsole",
+    name="aix",
     help="A comprehensive prompt management and execution tool",
     rich_markup_mode="rich"
 )

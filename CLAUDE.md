@@ -26,17 +26,17 @@ pip install -e ".[dev]"
 pytest
 
 # Run tests with coverage report
-pytest --cov=promptconsole --cov-report=term-missing
+pytest --cov=aix --cov-report=term-missing
 
 # Type checking
-mypy promptconsole/
+mypy aix/
 
 # Code formatting
-black promptconsole/
-isort promptconsole/
+black aix/
+isort aix/
 
 # Linting
-flake8 promptconsole/
+flake8 aix/
 
 # Pre-commit hooks (if configured)
 pre-commit run --all-files
@@ -51,7 +51,7 @@ python main.py --help
 aix --help
 
 # Direct module execution
-python -m promptconsole.cli --help
+python -m aix.cli --help
 ```
 
 ## Architecture

@@ -38,5 +38,5 @@ Run `aix --help` to verify installation. If you see help text, you're golden. If
 ## Troubleshooting
 
 - **"uv not found"**: Install uv via `curl -Ls https://astral.sh/uv/install.sh | sh`
-- **"command not found"**: Try `python -m promptconsole.cli --help`
+- **"command not found"**: Try `python -m aix.cli --help`
 - **"it doesn't work"**: Have you tried asking nicely?

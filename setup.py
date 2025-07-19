@@ -6,7 +6,7 @@ from setuptools import setup
 kwargs = json.loads(
     """
 {
-    "name": "promptconsole",
+    "name": "aix",
     "python_requires": ">=3.8",
     "author": "PromptConsole Team",
     "author_email": "team@promptconsole.dev",

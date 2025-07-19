@@ -170,7 +170,7 @@ aix run complex-prompt --param lang=python --param style=pep8 --param complexity
 
 | Problem | Solution |
 |---------|----------|
-| `aix: command not found` | Try `python -m promptconsole.cli --help` |
+| `aix: command not found` | Try `python -m aix.cli --help` |
 | `No API key found` | Run `aix api-key openrouter` |
 | `Command not allowed` | Add `--enable-commands` to your run command |
 | `Upgrade failed` | Run `uv tool install aix --force --from git+https://github.com/bhadzhiev/prompt.git` |

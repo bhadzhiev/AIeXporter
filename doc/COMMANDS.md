@@ -129,11 +129,11 @@ export PROMPT_STORAGE_PATH="/custom/path"
 
 ## Command Aliases
 
-Since PromptConsole installs as both `aix` and `promptconsole`, you can use:
+Since aix can be run in multiple ways, you can use:
 ```bash
 aix list
 # or
-promptconsole list
+python -m aix.cli list
 ```
 
 ## Command Chaining
