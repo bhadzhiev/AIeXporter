@@ -432,6 +432,9 @@ def run(
     selected_provider = provider or config.get_default_provider()
     api_key = config.get_api_key(selected_provider)
     
+    # Always show the generated prompt before execution
+    console.print(Panel(generated_prompt, title="Generated Prompt (before API execution)", expand=False))
+    
     if not api_key:
         console.print(f"No API key found for provider '{selected_provider}'", style="red")
         console.print(f"Tip: Set it up with: aix api-key {selected_provider}", style="yellow")
