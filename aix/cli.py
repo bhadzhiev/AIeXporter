@@ -455,8 +455,26 @@ def run(
             return
     
     try:
-        client = get_client(selected_provider, api_key)
-        selected_model = model or config.get_default_model(selected_provider)
+        # Handle custom providers
+        custom_config = None
+        if selected_provider.startswith("custom:"):
+            provider_name = selected_provider[7:]  # Remove "custom:" prefix
+            custom_config = config.get_custom_provider(provider_name)
+            if not custom_config:
+                console.print(f"Custom provider '{provider_name}' not found", style="red")
+                console.print("Available custom providers:", style="yellow")
+                for name in config.get_custom_providers().keys():
+                    console.print(f"  custom:{name}", style="dim")
+                return
+            selected_provider = "custom"
+        
+        client = get_client(selected_provider, api_key, custom_config)
+        
+        # Get default model
+        if selected_provider == "custom" and custom_config:
+            selected_model = model or custom_config.get("default_model", "")
+        else:
+            selected_model = model or config.get_default_model(selected_provider)
         
         # Prepare API parameters
         api_params = {}
@@ -1052,6 +1070,110 @@ def collection_import(
                 
     except Exception as e:
         console.print(f"Import failed: {e}", style="red")
+
+# Provider management commands
+provider_app = typer.Typer(help="Manage custom API providers")
+
+@provider_app.command("add")
+def provider_add(
+    name: str = typer.Argument(..., help="Name of the custom provider"),
+    base_url: str = typer.Argument(..., help="Base URL for the API endpoint"),
+    default_model: Optional[str] = typer.Option(None, "--model", help="Default model for this provider"),
+    header: Optional[List[str]] = typer.Option(None, "--header", help="Custom headers in key:value format"),
+    auth_type: str = typer.Option("bearer", "--auth-type", help="Authentication type (bearer, api-key)")
+):
+    """Add a custom API provider."""
+    config = Config()
+    
+    # Parse headers
+    headers = {}
+    if header:
+        for h in header:
+            if ":" not in h:
+                console.print(f"Invalid header format: {h}. Use key:value format", style="red")
+                return
+            key, value = h.split(":", 1)
+            headers[key.strip()] = value.strip()
+    
+    success = config.add_custom_provider(
+        name=name,
+        base_url=base_url,
+        default_model=default_model,
+        headers=headers,
+        auth_type=auth_type
+    )
+    
+    if success:
+        console.print(f"Custom provider '{name}' added successfully!", style="green")
+        console.print(f"Usage: aix run <prompt> --provider custom:{name}", style="cyan")
+    else:
+        console.print(f"Failed to add custom provider '{name}'", style="red")
+
+@provider_app.command("list")
+def provider_list():
+    """List all custom providers."""
+    config = Config()
+    custom_providers = config.get_custom_providers()
+    
+    if not custom_providers:
+        console.print("No custom providers configured", style="yellow")
+        console.print("Add one with: aix provider add <name> <base-url>", style="dim")
+        return
+    
+    table = Table(title="Custom Providers")
+    table.add_column("Name", style="cyan")
+    table.add_column("Base URL", style="green")
+    table.add_column("Default Model", style="yellow")
+    table.add_column("Auth Type", style="blue")
+    
+    for name, config_data in custom_providers.items():
+        table.add_row(
+            name,
+            config_data.get("base_url", ""),
+            config_data.get("default_model", "Not set"),
+            config_data.get("auth_type", "bearer")
+        )
+    
+    console.print(table)
+
+@provider_app.command("remove")
+def provider_remove(
+    name: str = typer.Argument(..., help="Name of the custom provider to remove")
+):
+    """Remove a custom provider."""
+    config = Config()
+    
+    if config.remove_custom_provider(name):
+        console.print(f"Custom provider '{name}' removed successfully!", style="green")
+    else:
+        console.print(f"Custom provider '{name}' not found", style="red")
+
+@provider_app.command("info")
+def provider_info(
+    name: str = typer.Argument(..., help="Name of the custom provider")
+):
+    """Show detailed information about a custom provider."""
+    config = Config()
+    provider_config = config.get_custom_provider(name)
+    
+    if not provider_config:
+        console.print(f"Custom provider '{name}' not found", style="red")
+        return
+    
+    console.print(f"[bold cyan]Custom Provider: {name}[/bold cyan]")
+    console.print(f"Base URL: {provider_config.get('base_url', 'Not set')}")
+    console.print(f"Default Model: {provider_config.get('default_model', 'Not set')}")
+    console.print(f"Auth Type: {provider_config.get('auth_type', 'bearer')}")
+    
+    headers = provider_config.get('headers', {})
+    if headers:
+        console.print("Custom Headers:")
+        for key, value in headers.items():
+            console.print(f"  {key}: {value}")
+    else:
+        console.print("Custom Headers: None")
+
+app.add_typer(provider_app, name="provider")
 
 @app.command()
 def upgrade():

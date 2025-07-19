@@ -124,6 +124,7 @@ We've hidden all the boring details in separate files because READMEs should be 
 - **[Installation Guide](docs/INSTALLATION.md)** - For when `pip install` isn't working
 - **[Usage Guide](docs/USAGE.md)** - For when you want to do more than just `aix --help`
 - **[Template Guide](docs/TEMPLATES.md)** - For when you want to become a prompt wizard
+- **[Custom Providers Guide](docs/CUSTOM_PROVIDERS.md)** - For when you want to use local AI models
 - **[API Providers](docs/API_PROVIDERS.md)** - For when you want to know which AI to bribe
 - **[Command Reference](docs/COMMANDS.md)** - For when you forget what `aix run --param` does
 
@@ -191,6 +192,21 @@ aix create --help
 ```
 
 ## Examples Gallery
+
+### 0. Custom AI Providers Example
+
+```bash
+# Add local Ollama for free local AI
+aix provider add "ollama" "http://localhost:11434/v1" --model "llama3.2"
+
+# Add custom hosted model
+aix provider add "custom-api" "https://my-api.example.com/v1" \
+  --model "my-model" \
+  --header "X-API-Key:secret"
+
+# Use custom provider
+aix run my-prompt --provider custom:ollama --execute
+```
 
 ### 1. The "I'm a DevOps engineer" prompt
 ```bash

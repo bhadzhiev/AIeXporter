@@ -34,7 +34,8 @@ class Config:
                 "streaming": False,
                 "max_tokens": 1024,
                 "temperature": 0.7,
-                "auto_upgrade": False
+                "auto_upgrade": False,
+                "custom_providers": {}
             }
             self._save_config(default_config)
             return default_config
@@ -120,3 +121,36 @@ class Config:
             return self.get("anthropic_default_model", "claude-3-haiku-20240307")
         else:  # openrouter or others
             return self.get("default_model", "meta-llama/llama-3.2-3b-instruct:free")
+    
+    def get_custom_providers(self) -> Dict[str, Dict[str, Any]]:
+        """Get all custom provider configurations."""
+        return self.get("custom_providers", {})
+    
+    def add_custom_provider(self, name: str, base_url: str, default_model: str = None, 
+                          headers: Dict[str, str] = None, auth_type: str = "bearer") -> bool:
+        """Add a custom provider configuration."""
+        custom_providers = self.get_custom_providers()
+        
+        custom_providers[name] = {
+            "base_url": base_url,
+            "default_model": default_model,
+            "headers": headers or {},
+            "auth_type": auth_type
+        }
+        
+        return self.set("custom_providers", custom_providers)
+    
+    def remove_custom_provider(self, name: str) -> bool:
+        """Remove a custom provider configuration."""
+        custom_providers = self.get_custom_providers()
+        
+        if name in custom_providers:
+            del custom_providers[name]
+            return self.set("custom_providers", custom_providers)
+        
+        return False
+    
+    def get_custom_provider(self, name: str) -> Optional[Dict[str, Any]]:
+        """Get a specific custom provider configuration."""
+        custom_providers = self.get_custom_providers()
+        return custom_providers.get(name)

@@ -1,10 +1,13 @@
 import pytest
 import json
+from unittest.mock import patch, MagicMock
 from aix.api_client import (
     OpenRouterClient, 
     OpenAIClient, 
     AnthropicClient,
-    APIResponse
+    CustomAPIClient,
+    APIResponse,
+    get_client
 )
 
 
@@ -91,3 +94,86 @@ class TestAPIResponse:
         assert response.usage is None
         assert response.cost is None
         assert response.provider is None
+
+
+class TestCustomAPIClient:
+    """Test Custom API client functionality."""
+
+    def test_client_initialization(self):
+        """Test custom client initialization."""
+        headers = {"X-Custom-Header": "test-value"}
+        client = CustomAPIClient(
+            "test-key", 
+            "http://localhost:11434/v1", 
+            headers=headers,
+            provider_name="ollama"
+        )
+        
+        assert client.api_key == "test-key"
+        assert client.base_url == "http://localhost:11434/v1"
+        assert client.custom_headers == headers
+        assert client.provider_name == "ollama"
+
+    def test_client_initialization_minimal(self):
+        """Test custom client initialization with minimal config."""
+        client = CustomAPIClient("test-key", "http://localhost:8080/v1")
+        
+        assert client.api_key == "test-key"
+        assert client.base_url == "http://localhost:8080/v1"
+        assert client.custom_headers == {}
+        assert client.provider_name == "custom"
+
+    def test_close_client(self):
+        """Test client cleanup."""
+        client = CustomAPIClient("test-key", "http://localhost:8080/v1")
+        client.close()
+        # Should not raise any exceptions
+
+
+class TestGetClient:
+    """Test get_client factory function."""
+
+    def test_get_openrouter_client(self):
+        """Test getting OpenRouter client."""
+        client = get_client("openrouter", "test-key")
+        assert isinstance(client, OpenAIClient)
+        assert client.api_key == "test-key"
+        assert "openrouter.ai" in client.base_url
+
+    def test_get_openai_client(self):
+        """Test getting OpenAI client."""
+        client = get_client("openai", "test-key")
+        assert isinstance(client, OpenAIClient)
+        assert client.api_key == "test-key"
+        assert "api.openai.com" in client.base_url
+
+    def test_get_anthropic_client(self):
+        """Test getting Anthropic client."""
+        client = get_client("anthropic", "test-key")
+        assert isinstance(client, AnthropicClient)
+        assert client.api_key == "test-key"
+        assert "api.anthropic.com" in client.base_url
+
+    def test_get_custom_client(self):
+        """Test getting custom client."""
+        custom_config = {
+            "base_url": "http://localhost:11434/v1",
+            "headers": {"X-Custom": "test"},
+            "name": "ollama"
+        }
+        client = get_client("custom", "test-key", custom_config)
+        assert isinstance(client, CustomAPIClient)
+        assert client.api_key == "test-key"
+        assert client.base_url == "http://localhost:11434/v1"
+        assert client.custom_headers == {"X-Custom": "test"}
+        assert client.provider_name == "ollama"
+
+    def test_get_custom_client_no_config(self):
+        """Test getting custom client without config raises error."""
+        with pytest.raises(ValueError, match="Custom provider requires configuration"):
+            get_client("custom", "test-key")
+
+    def test_get_unsupported_provider(self):
+        """Test getting unsupported provider raises error."""
+        with pytest.raises(ValueError, match="Unsupported provider: invalid"):
+            get_client("invalid", "test-key")

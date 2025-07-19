@@ -11,6 +11,7 @@ class Provider(Enum):
     ANTHROPIC = "anthropic"
     GROQ = "groq"
     TOGETHER = "together"
+    CUSTOM = "custom"
 
 @dataclass
 class APIResponse:
@@ -196,6 +197,80 @@ class OpenAIClient(BaseAPIClient):
                     except json.JSONDecodeError:
                         continue
 
+class CustomAPIClient(BaseAPIClient):
+    def __init__(self, api_key: str, base_url: str, headers: Dict[str, str] = None, provider_name: str = "custom"):
+        super().__init__(api_key, base_url)
+        self.custom_headers = headers or {}
+        self.provider_name = provider_name
+    
+    def generate(self, prompt: str, model: str = None, **kwargs) -> APIResponse:
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json",
+            **self.custom_headers
+        }
+        
+        data = {
+            "model": model,
+            "messages": [{"role": "user", "content": prompt}],
+            **kwargs
+        }
+        
+        response = self.client.post(
+            f"{self.base_url}/chat/completions",
+            headers=headers,
+            json=data
+        )
+        response.raise_for_status()
+        
+        result = response.json()
+        content = result["choices"][0]["message"]["content"]
+        usage = result.get("usage")
+        
+        return APIResponse(
+            content=content,
+            model=model,
+            usage=usage,
+            provider=self.provider_name,
+            raw_response=result
+        )
+    
+    def stream_generate(self, prompt: str, model: str = None, **kwargs) -> Generator[str, None, None]:
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json",
+            **self.custom_headers
+        }
+        
+        data = {
+            "model": model,
+            "messages": [{"role": "user", "content": prompt}],
+            "stream": True,
+            **kwargs
+        }
+        
+        with self.client.stream(
+            "POST",
+            f"{self.base_url}/chat/completions",
+            headers=headers,
+            json=data
+        ) as response:
+            response.raise_for_status()
+            for line in response.iter_lines():
+                if line.startswith("data: "):
+                    data_str = line[6:]
+                    if data_str.strip() == "[DONE]":
+                        break
+                    try:
+                        chunk = json.loads(data_str)
+                        if "choices" in chunk and chunk["choices"]:
+                            delta = chunk["choices"][0].get("delta", {})
+                            content = delta.get("content", "")
+                            if content:
+                                yield content
+                    except json.JSONDecodeError:
+                        continue
+
 class AnthropicClient(BaseAPIClient):
     def __init__(self, api_key: str):
         super().__init__(api_key, "https://api.anthropic.com/v1")
@@ -267,7 +342,7 @@ class AnthropicClient(BaseAPIClient):
                     except json.JSONDecodeError:
                         continue
 
-def get_client(provider: str, api_key: str) -> BaseAPIClient:
+def get_client(provider: str, api_key: str, custom_config: Dict[str, Any] = None) -> BaseAPIClient:
     """Factory function to get the appropriate API client."""
     if provider == "openrouter":
         # Use OpenAI client with OpenRouter endpoint
@@ -276,5 +351,14 @@ def get_client(provider: str, api_key: str) -> BaseAPIClient:
         return OpenAIClient(api_key)
     elif provider == "anthropic":
         return AnthropicClient(api_key)
+    elif provider == "custom":
+        if not custom_config:
+            raise ValueError("Custom provider requires configuration")
+        return CustomAPIClient(
+            api_key=api_key,
+            base_url=custom_config["base_url"],
+            headers=custom_config.get("headers", {}),
+            provider_name=custom_config.get("name", "custom")
+        )
     else:
         raise ValueError(f"Unsupported provider: {provider}")

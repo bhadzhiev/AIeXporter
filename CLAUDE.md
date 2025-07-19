@@ -110,8 +110,39 @@ Built-in support for multiple AI providers with unified interface:
 - **OpenRouter**: `meta-llama/llama-3.2-3b-instruct:free` (default, free tier)
 - **OpenAI**: `gpt-3.5-turbo` (default model)
 - **Anthropic**: `claude-3-haiku-20240307` (default model)
+- **Custom Providers**: User-defined OpenAI-compatible endpoints
 
 Each provider implements `BaseAPIClient` interface with streaming support.
+
+### Custom Provider Support
+Add custom API providers for any OpenAI-compatible endpoint:
+```bash
+# Add a custom provider (e.g., local Ollama)
+aix provider add "ollama" "http://localhost:11434/v1" \
+  --model "llama3.2" \
+  --header "X-Custom-Header:value"
+
+# List all custom providers
+aix provider list
+
+# Get provider details
+aix provider info ollama
+
+# Use custom provider
+aix run my-prompt --provider custom:ollama
+
+# Remove provider
+aix provider remove ollama
+```
+
+Custom providers support:
+- Custom base URLs for any OpenAI-compatible API
+- Custom headers for authentication or API requirements
+- Default model configuration per provider
+- Bearer token or API key authentication
+- Works with Ollama, vLLM, FastAPI, and other OpenAI-compatible services
+
+See [docs/CUSTOM_PROVIDERS.md](docs/CUSTOM_PROVIDERS.md) for detailed documentation.
 
 ## Testing Utilities
 

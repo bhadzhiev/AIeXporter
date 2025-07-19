@@ -24,8 +24,17 @@ def complete_prompt_names(incomplete: str) -> List[str]:
         return []
 
 def complete_providers(incomplete: str) -> List[str]:
-    """Complete API provider names."""
+    """Complete API provider names including custom providers."""
     providers = ["openrouter", "openai", "anthropic"]
+    
+    # Add custom providers
+    try:
+        config = Config()
+        custom_providers = config.get_custom_providers()
+        custom_provider_names = [f"custom:{name}" for name in custom_providers.keys()]
+        providers.extend(custom_provider_names)
+    except Exception:
+        pass  # Ignore errors and just return built-in providers
     
     if incomplete:
         providers = [p for p in providers if p.startswith(incomplete)]
