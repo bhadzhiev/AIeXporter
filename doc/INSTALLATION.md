@@ -4,7 +4,7 @@
 
 ```bash
 # If you have uv (you should)
-uv tool install aix --from git+https://github.com/bhadzhiev/prompt.git
+uv tool install aix --from git+https://github.com/bhadzhiev/AIeXporter.git
 
 # If you're still living in pip land
 pip install -e .
@@ -14,8 +14,8 @@ pip install -e .
 
 ```bash
 # Clone the repo
-git clone https://github.com/bhadzhiev/prompt.git
-cd prompt
+git clone https://github.com/bhadzhiev/AIeXporter.git
+cd AIeXporter
 
 # Install dependencies
 uv sync  # or pip install -e .

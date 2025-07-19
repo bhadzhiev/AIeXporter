@@ -35,10 +35,10 @@ aix run explain-code --param file="main.py" --execute
 
 ```bash
 # Option A: The Cool Kid Way (uv)
-uv tool install aix --from git+https://github.com/bhadzhiev/prompt.git
+uv tool install aix --from git+https://github.com/bhadzhiev/AIeXporter.git
 
 # Option B: The "I still use pip" way
-pip install git+https://github.com/bhadzhiev/prompt.git
+pip install git+https://github.com/bhadzhiev/AIeXporter.git
 
 # Option C: The "I like to suffer" way
 # (clone, install deps, etc... see [Installation Guide](doc/INSTALLATION.md))
@@ -174,7 +174,7 @@ aix run complex-prompt --param lang=python --param style=pep8 --param complexity
 | `aix: command not found` | Try `python -m aix.cli --help` |
 | `No API key found` | Run `aix api-key openrouter` |
 | `Command not allowed` | Add `--enable-commands` to your run command |
-| `Upgrade failed` | Run `uv tool install aix --force --from git+https://github.com/bhadzhiev/prompt.git` |
+| `Upgrade failed` | Run `uv tool install aix --force --from git+https://github.com/bhadzhiev/AIeXporter.git` |
 | `It still doesn't work` | Have you tried turning it off and on again? |
 
 ### Getting Help

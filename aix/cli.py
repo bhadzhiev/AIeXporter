@@ -708,7 +708,7 @@ def perform_upgrade():
         console.print("Upgrading aix via uv tool...", style="cyan")
         result = subprocess.run([
             uv_path, "tool", "install", "aix", 
-            "--from", "git+https://github.com/bhadzhiev/prompt.git", "--force"
+            "--from", "git+https://github.com/bhadzhiev/AIeXporter.git", "--force"
         ], capture_output=True, text=True, timeout=120)
         
         if result.returncode == 0:
