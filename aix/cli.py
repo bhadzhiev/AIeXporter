@@ -635,7 +635,8 @@ def perform_upgrade():
         ], capture_output=True, text=True, timeout=120)
         
         if result.returncode == 0:
-            console.print("Successfully upgraded PromptConsole", style="green")
+            from . import __version__
+            console.print(f"Successfully upgraded PromptConsole to version {__version__}", style="green")
             return True
         else:
             console.print("Upgrade failed", style="red")
@@ -649,7 +650,10 @@ def perform_upgrade():
 @app.command()
 def upgrade():
     """Upgrade aix to the latest version from GitHub."""
-    perform_upgrade()
+    success = perform_upgrade()
+    if success:
+        from . import __version__
+        console.print(f"Now running aix version {__version__}", style="blue")
 
 if __name__ == "__main__":
     app()
