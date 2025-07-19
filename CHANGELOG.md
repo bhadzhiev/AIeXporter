@@ -1,3 +1,9 @@
+## v0.6.0 (2025-07-20)
+
+### Feat
+
+- add intelligent command execution with smart fallbacks
+
 ## v0.5.3 (2025-07-20)
 
 ### Fix
