@@ -216,24 +216,42 @@ class CustomAPIClient(BaseAPIClient):
             **kwargs
         }
         
-        response = self.client.post(
-            f"{self.base_url}/chat/completions",
-            headers=headers,
-            json=data
-        )
-        response.raise_for_status()
-        
-        result = response.json()
-        content = result["choices"][0]["message"]["content"]
-        usage = result.get("usage")
-        
-        return APIResponse(
-            content=content,
-            model=model,
-            usage=usage,
-            provider=self.provider_name,
-            raw_response=result
-        )
+        try:
+            response = self.client.post(
+                f"{self.base_url}/chat/completions",
+                headers=headers,
+                json=data
+            )
+            response.raise_for_status()
+            
+            result = response.json()
+            
+            # Handle different response formats more robustly
+            if "choices" not in result or not result["choices"]:
+                raise ValueError(f"Invalid response format from {self.provider_name}: missing 'choices'")
+            
+            choice = result["choices"][0]
+            if "message" not in choice:
+                raise ValueError(f"Invalid response format from {self.provider_name}: missing 'message' in choice")
+            
+            content = choice["message"].get("content", "")
+            usage = result.get("usage")
+            
+            return APIResponse(
+                content=content,
+                model=model,
+                usage=usage,
+                provider=self.provider_name,
+                raw_response=result
+            )
+        except httpx.TimeoutException as e:
+            raise ValueError(f"Request to {self.provider_name} timed out: {e}")
+        except httpx.HTTPStatusError as e:
+            raise ValueError(f"HTTP error from {self.provider_name}: {e.response.status_code} - {e.response.text}")
+        except httpx.RequestError as e:
+            raise ValueError(f"Request error to {self.provider_name}: {e}")
+        except Exception as e:
+            raise ValueError(f"Unexpected error with {self.provider_name}: {e}")
     
     def stream_generate(self, prompt: str, model: str = None, **kwargs) -> Generator[str, None, None]:
         headers = {
@@ -249,27 +267,36 @@ class CustomAPIClient(BaseAPIClient):
             **kwargs
         }
         
-        with self.client.stream(
-            "POST",
-            f"{self.base_url}/chat/completions",
-            headers=headers,
-            json=data
-        ) as response:
-            response.raise_for_status()
-            for line in response.iter_lines():
-                if line.startswith("data: "):
-                    data_str = line[6:]
-                    if data_str.strip() == "[DONE]":
-                        break
-                    try:
-                        chunk = json.loads(data_str)
-                        if "choices" in chunk and chunk["choices"]:
-                            delta = chunk["choices"][0].get("delta", {})
-                            content = delta.get("content", "")
-                            if content:
-                                yield content
-                    except json.JSONDecodeError:
-                        continue
+        try:
+            with self.client.stream(
+                "POST",
+                f"{self.base_url}/chat/completions",
+                headers=headers,
+                json=data
+            ) as response:
+                response.raise_for_status()
+                for line in response.iter_lines():
+                    if line.startswith("data: "):
+                        data_str = line[6:]
+                        if data_str.strip() == "[DONE]":
+                            break
+                        try:
+                            chunk = json.loads(data_str)
+                            if "choices" in chunk and chunk["choices"]:
+                                delta = chunk["choices"][0].get("delta", {})
+                                content = delta.get("content", "")
+                                if content:
+                                    yield content
+                        except json.JSONDecodeError:
+                            continue
+        except httpx.TimeoutException as e:
+            raise ValueError(f"Streaming request to {self.provider_name} timed out: {e}")
+        except httpx.HTTPStatusError as e:
+            raise ValueError(f"HTTP error during streaming from {self.provider_name}: {e.response.status_code}")
+        except httpx.RequestError as e:
+            raise ValueError(f"Request error during streaming to {self.provider_name}: {e}")
+        except Exception as e:
+            raise ValueError(f"Unexpected error during streaming with {self.provider_name}: {e}")
 
 class AnthropicClient(BaseAPIClient):
     def __init__(self, api_key: str):
