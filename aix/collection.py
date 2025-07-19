@@ -80,6 +80,15 @@ class CollectionStorage:
         """Get the file path for a collection."""
         extension = "yaml" if format == "yaml" else "json"
         return self.collections_path / f"{name}.{extension}"
+    
+    def _get_collection_dir_path(self, name: str) -> Path:
+        """Get the directory path for a collection."""
+        return self.collections_path / name
+    
+    def _get_collection_metadata_path(self, name: str, format: str = "yaml") -> Path:
+        """Get the metadata file path within a collection directory."""
+        extension = "yaml" if format == "yaml" else "json"
+        return self._get_collection_dir_path(name) / f".collection.{extension}"
 
     def save_collection(self, collection: Collection, format: str = "yaml") -> bool:
         """Save a collection to storage."""
@@ -99,8 +108,39 @@ class CollectionStorage:
             print(f"Error saving collection: {e}")
             return False
 
+    def save_collection_to_directory(self, collection: Collection, format: str = "yaml") -> bool:
+        """Save a collection to its own directory with metadata file."""
+        try:
+            # Create collection directory
+            collection_dir = self._get_collection_dir_path(collection.name)
+            collection_dir.mkdir(parents=True, exist_ok=True)
+            
+            # Save collection metadata
+            metadata_path = self._get_collection_metadata_path(collection.name, format)
+            data = collection.to_dict()
+            # Remove templates list from metadata since templates are now in the directory
+            data.pop("templates", None)
+
+            if format == "yaml":
+                with open(metadata_path, "w") as f:
+                    yaml.dump(data, f, default_flow_style=False, sort_keys=False)
+            else:  # json
+                with open(metadata_path, "w") as f:
+                    json.dump(data, f, indent=2)
+
+            return True
+        except Exception as e:
+            print(f"Error saving collection to directory: {e}")
+            return False
+
     def get_collection(self, name: str) -> Optional[Collection]:
-        """Load a collection from storage."""
+        """Load a collection from storage (supports both old and new formats)."""
+        # First try to load from directory (new format)
+        collection_from_dir = self.get_collection_from_directory(name)
+        if collection_from_dir:
+            return collection_from_dir
+            
+        # Fall back to old format
         for format in ["yaml", "json"]:
             collection_path = self._get_collection_path(name, format)
             if collection_path.exists():
@@ -119,11 +159,62 @@ class CollectionStorage:
 
         return None
 
+    def get_collection_from_directory(self, name: str) -> Optional[Collection]:
+        """Load a collection from its directory."""
+        collection_dir = self._get_collection_dir_path(name)
+        if not collection_dir.exists() or not collection_dir.is_dir():
+            return None
+            
+        for format in ["yaml", "json"]:
+            metadata_path = self._get_collection_metadata_path(name, format)
+            if metadata_path.exists():
+                try:
+                    if format == "yaml":
+                        with open(metadata_path, "r") as f:
+                            data = yaml.safe_load(f) or {}
+                    else:  # json
+                        with open(metadata_path, "r") as f:
+                            data = json.load(f)
+                    
+                    # Add templates list by scanning directory
+                    templates = []
+                    for file_path in collection_dir.glob("*.yaml"):
+                        if file_path.name != ".collection.yaml" and file_path.name != ".collection.json":
+                            templates.append(file_path.stem)
+                    for file_path in collection_dir.glob("*.json"):
+                        if file_path.name != ".collection.yaml" and file_path.name != ".collection.json":
+                            template_name = file_path.stem
+                            if template_name not in templates:
+                                templates.append(template_name)
+                    
+                    data["templates"] = templates
+                    data["name"] = name  # Ensure name is set
+                    
+                    return Collection.from_dict(data)
+                except Exception as e:
+                    print(f"Error loading collection {name} from directory: {e}")
+                    continue
+        
+        return None
+
     def list_collections(self) -> List[Collection]:
-        """List all available collections."""
+        """List all available collections (supports both old and new formats)."""
         collections = []
         seen_names = set()
 
+        # First scan for directory-based collections (new format)
+        for dir_path in self.collections_path.glob("*"):
+            if dir_path.is_dir():
+                name = dir_path.name
+                if name in seen_names:
+                    continue
+                seen_names.add(name)
+
+                collection = self.get_collection_from_directory(name)
+                if collection:
+                    collections.append(collection)
+
+        # Then scan for file-based collections (old format)
         for file_path in self.collections_path.glob("*"):
             if file_path.suffix in [".yaml", ".yml", ".json"]:
                 name = file_path.stem
@@ -639,3 +730,81 @@ class CollectionManager:
         except Exception:
             return None
         return None
+
+    def migrate_collection_to_directory(self, collection_name: str) -> bool:
+        """Migrate a collection from file-based to directory-based storage."""
+        try:
+            # Load the existing collection
+            collection = self.collection_storage.get_collection(collection_name)
+            if not collection:
+                print(f"Collection '{collection_name}' not found")
+                return False
+
+            # Check if already in directory format
+            collection_dir = self.collection_storage._get_collection_dir_path(collection_name)
+            if collection_dir.exists():
+                print(f"Collection '{collection_name}' is already in directory format")
+                return True
+
+            print(f"Migrating collection '{collection_name}' to directory format...")
+
+            # Create the collection directory and save metadata
+            success = self.collection_storage.save_collection_to_directory(collection)
+            if not success:
+                print(f"Failed to create collection directory for '{collection_name}'")
+                return False
+
+            # Move each template to the collection directory
+            moved_templates = []
+            for template_name in collection.templates:
+                template = self.prompt_storage.get_prompt(template_name)
+                if template:
+                    # Save template in collection directory
+                    success = self.prompt_storage.save_prompt(template, "yaml", collection_name)
+                    if success:
+                        moved_templates.append(template_name)
+                        print(f"  Moved template '{template_name}' to collection directory")
+                    else:
+                        print(f"  Failed to move template '{template_name}'")
+                else:
+                    print(f"  Template '{template_name}' not found, skipping")
+
+            # Remove old collection file
+            old_collection_file = self.collection_storage._get_collection_path(collection_name, "yaml")
+            if old_collection_file.exists():
+                old_collection_file.unlink()
+                print(f"  Removed old collection file: {old_collection_file}")
+
+            # Optionally remove old template files from main directory
+            for template_name in moved_templates:
+                old_yaml_file = self.prompt_storage.storage_path / f"{template_name}.yaml"
+                old_txt_file = self.prompt_storage.storage_path / f"{template_name}.txt"
+                if old_yaml_file.exists():
+                    old_yaml_file.unlink()
+                    print(f"  Removed old template metadata: {old_yaml_file}")
+                if old_txt_file.exists():
+                    old_txt_file.unlink()
+                    print(f"  Removed old template content: {old_txt_file}")
+
+            print(f"✅ Successfully migrated collection '{collection_name}' to directory format")
+            return True
+
+        except Exception as e:
+            print(f"Error migrating collection '{collection_name}': {e}")
+            return False
+
+    def migrate_all_collections_to_directories(self) -> bool:
+        """Migrate all collections to directory-based storage."""
+        print("🚀 Starting migration of all collections to directory format...")
+        
+        collections = self.list_collections()
+        success_count = 0
+        total_count = len(collections)
+        
+        for collection in collections:
+            if self.migrate_collection_to_directory(collection.name):
+                success_count += 1
+            print()  # Add spacing between collections
+        
+        print(f"Migration complete: {success_count}/{total_count} collections migrated successfully")
+        return success_count == total_count

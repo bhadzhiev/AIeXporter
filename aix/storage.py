@@ -20,25 +20,42 @@ class PromptStorage:
                 self.storage_path = Path.home() / ".prompts"
         self.storage_path.mkdir(exist_ok=True)
 
-    def _get_prompt_path(self, name: str, format: str = "yaml") -> Path:
+    def _get_prompt_path(self, name: str, format: str = "yaml", collection: str = None) -> Path:
         """Get the file path for a prompt metadata."""
         extension = "yaml" if format == "yaml" else "json"
-        return self.storage_path / f"{name}.{extension}"
+        if collection:
+            # Store in collection directory
+            collection_dir = self.storage_path / "collections" / collection
+            return collection_dir / f"{name}.{extension}"
+        else:
+            # Store in main directory (legacy)
+            return self.storage_path / f"{name}.{extension}"
 
-    def _get_template_path(self, name: str) -> Path:
+    def _get_template_path(self, name: str, collection: str = None) -> Path:
         """Get the file path for a prompt template content."""
-        return self.storage_path / f"{name}.txt"
+        if collection:
+            # Store in collection directory
+            collection_dir = self.storage_path / "collections" / collection
+            return collection_dir / f"{name}.txt"
+        else:
+            # Store in main directory (legacy)
+            return self.storage_path / f"{name}.txt"
 
-    def save_prompt(self, prompt: PromptTemplate, format: str = "yaml") -> bool:
+    def save_prompt(self, prompt: PromptTemplate, format: str = "yaml", collection: str = None) -> bool:
         """Save a prompt template to storage using separated files."""
         try:
+            # Create collection directory if needed
+            if collection:
+                collection_dir = self.storage_path / "collections" / collection
+                collection_dir.mkdir(parents=True, exist_ok=True)
+
             # Save template content to .txt file
-            template_path = self._get_template_path(prompt.name)
+            template_path = self._get_template_path(prompt.name, collection)
             with open(template_path, "w", encoding="utf-8") as f:
                 f.write(prompt.template)
 
             # Save metadata without template content
-            metadata_path = self._get_prompt_path(prompt.name, format)
+            metadata_path = self._get_prompt_path(prompt.name, format, collection)
             metadata = prompt.to_dict()
             # Remove template content from metadata, store reference instead
             metadata.pop("template", None)
@@ -56,11 +73,36 @@ class PromptStorage:
             print(f"Error saving prompt: {e}")
             return False
 
-    def get_prompt(self, name: str) -> Optional[PromptTemplate]:
+    def get_prompt(self, name: str, collection: str = None) -> Optional[PromptTemplate]:
         """Load a prompt template from storage using separated files."""
+        # If collection is specified, try that first
+        if collection:
+            prompt = self._get_prompt_from_location(name, collection)
+            if prompt:
+                return prompt
+        
+        # Try main directory (legacy location)
+        prompt = self._get_prompt_from_location(name, None)
+        if prompt:
+            return prompt
+            
+        # If not found and no collection specified, search all collections
+        if not collection:
+            collections_path = self.storage_path / "collections"
+            if collections_path.exists():
+                for collection_dir in collections_path.glob("*"):
+                    if collection_dir.is_dir():
+                        prompt = self._get_prompt_from_location(name, collection_dir.name)
+                        if prompt:
+                            return prompt
+        
+        return None
+
+    def _get_prompt_from_location(self, name: str, collection: str = None) -> Optional[PromptTemplate]:
+        """Load a prompt template from a specific location."""
         # Try YAML first, then JSON for metadata
         for format in ["yaml", "json"]:
-            metadata_path = self._get_prompt_path(name, format)
+            metadata_path = self._get_prompt_path(name, format, collection)
             if metadata_path.exists():
                 try:
                     # Load metadata
@@ -72,7 +114,7 @@ class PromptStorage:
                             metadata = json.load(f)
 
                     # Load template content from .txt file
-                    template_path = self._get_template_path(name)
+                    template_path = self._get_template_path(name, collection)
                     if template_path.exists():
                         with open(template_path, "r", encoding="utf-8") as f:
                             template_content = f.read()

@@ -1370,6 +1370,37 @@ def collection_import(
         console.print(f"Import failed: {e}", style="red")
 
 
+@app.command("collection-migrate")
+def collection_migrate(
+    collection_name: str = typer.Argument(None, help="Collection name to migrate (optional - migrates all if not specified)"),
+):
+    """Migrate collections to directory-based storage."""
+    try:
+        manager = CollectionManager()
+        
+        if collection_name:
+            # Migrate specific collection
+            console.print(f"Migrating collection '{collection_name}' to directory format...", style="blue")
+            success = manager.migrate_collection_to_directory(collection_name)
+            
+            if success:
+                console.print(f"✅ Successfully migrated collection '{collection_name}'", style="green")
+            else:
+                console.print(f"❌ Failed to migrate collection '{collection_name}'", style="red")
+        else:
+            # Migrate all collections
+            console.print("Migrating all collections to directory format...", style="blue")
+            success = manager.migrate_all_collections_to_directories()
+            
+            if success:
+                console.print("✅ All collections migrated successfully", style="green")
+            else:
+                console.print("⚠️ Some collections failed to migrate", style="yellow")
+                
+    except Exception as e:
+        console.print(f"Migration failed: {e}", style="red")
+
+
 # Provider management commands
 provider_app = typer.Typer(help="Manage custom API providers")
 

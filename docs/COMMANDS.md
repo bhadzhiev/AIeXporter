@@ -117,7 +117,6 @@ Most commands support these global options:
 Set default editor for `aix edit`:
 ```bash
 export EDITOR=code
-export EDITOR=vim
 export EDITOR=nano
 ```
 
