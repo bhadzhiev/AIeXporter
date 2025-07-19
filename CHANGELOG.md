@@ -1,3 +1,9 @@
+## v0.4.0 (2025-07-19)
+
+### Feat
+
+- enhance documentation with automated GitHub release creation
+
 ## v0.3.1 (2025-07-19)
 
 ### Fix
