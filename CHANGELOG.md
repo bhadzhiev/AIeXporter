@@ -1,3 +1,9 @@
+## v0.5.0 (2025-07-19)
+
+### Feat
+
+- add custom API provider support
+
 ## v0.4.0 (2025-07-19)
 
 ### Feat
