@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "aix"
-version = "0.5.0"
+version = "0.5.1"
 description = "AI executor - dynamic prompt management and execution tool"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -71,3 +71,8 @@ version_scheme = "semver"
 version_provider = "pep621"
 update_changelog_on_bump = true
 major_version_zero = true
+
+[dependency-groups]
+dev = [
+    "commitizen>=4.8.3",
+]
