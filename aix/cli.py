@@ -14,6 +14,7 @@ from .config import Config
 from .api_client import get_client, APIResponse
 from .api_keys import setup_api_key
 from .command_executor import CommandExecutor
+from .collection import CollectionManager, Collection
 from . import commands
 from . import __version__
 from .completion import (
@@ -78,21 +79,38 @@ def create(
 @app.command()
 def list(
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Show detailed information"),
-    tag: Optional[str] = typer.Option(None, "--tag", "-t", help="Filter by tag", autocompletion=complete_tags)
+    tag: Optional[str] = typer.Option(None, "--tag", "-t", help="Filter by tag", autocompletion=complete_tags),
+    all_templates: bool = typer.Option(False, "--all", "-a", help="Show all templates (ignore current collection)")
 ):
     """List all saved prompts."""
     storage = PromptStorage()
-    prompts = storage.list_prompts()
+    manager = CollectionManager()
+    
+    # Check if a collection is loaded and filter templates accordingly
+    current_collection = manager.collection_storage.get_current_collection()
+    
+    if current_collection and not all_templates:
+        # Show only templates from the current collection
+        prompts = manager.list_current_collection_templates()
+        collection_info = f" (from collection: {current_collection})"
+    else:
+        # Show all templates
+        prompts = storage.list_prompts()
+        collection_info = ""
     
     # Filter by tag if specified
     if tag:
         prompts = [p for p in prompts if tag in p.tags]
         if not prompts:
-            console.print(f"No prompts found with tag '{tag}'", style="yellow")
+            console.print(f"No prompts found with tag '{tag}'{collection_info}", style="yellow")
             return
     
     if not prompts:
-        console.print("No prompts found", style="yellow")
+        if current_collection and not all_templates:
+            console.print(f"No prompts found in collection '{current_collection}'", style="yellow")
+            console.print("Use 'aix collection-add <template>' to add templates", style="cyan")
+        else:
+            console.print("No prompts found", style="yellow")
         return
     
     if verbose:
@@ -115,8 +133,13 @@ def list(
     else:
         # Standard table view
         title = "Saved Prompts"
+        if current_collection and not all_templates:
+            title += f" (Collection: {current_collection})"
+        elif all_templates and current_collection:
+            title += " (All Templates)"
+        
         if tag:
-            title += f" (filtered by tag: {tag})"
+            title += f" - filtered by tag: {tag}"
         
         table = Table(title=title)
         table.add_column("Name", style="cyan", no_wrap=True)
@@ -136,11 +159,22 @@ def list(
         
         console.print(table)
         
-        # Show summary
-        if tag:
-            console.print(f"\n[dim]Found {len(prompts)} prompt(s) with tag '{tag}'[/dim]")
-        else:
-            console.print(f"\n[dim]Total: {len(prompts)} prompt(s)[/dim]")
+        # Show summary with collection context
+        summary = f"[dim]Total: {len(prompts)} prompt(s)"
+        if current_collection and not all_templates:
+            summary += f" in collection '{current_collection}'"
+        elif tag:
+            summary += f" with tag '{tag}'"
+        summary += "[/dim]"
+        
+        console.print(f"\n{summary}")
+        
+        # Show collection status hint
+        if current_collection:
+            if not all_templates:
+                console.print(f"[dim]💡 Use --all to see all templates or 'aix collection-unload' to work with all templates[/dim]")
+            else:
+                console.print(f"[dim]📌 Collection '{current_collection}' is loaded[/dim]")
 
 @app.command()
 def show(
@@ -305,11 +339,27 @@ def run(
     """Run a prompt with parameter substitution and optional API execution."""
     storage = PromptStorage()
     config = Config()
+    manager = CollectionManager()
+    
+    # Check if a collection is loaded and if the prompt is in it
+    current_collection = manager.collection_storage.get_current_collection()
+    
     prompt = storage.get_prompt(name)
     
     if not prompt:
         console.print(f"Prompt '{name}' not found", style="red")
+        if current_collection:
+            console.print(f"💡 Currently in collection '{current_collection}'. Use 'aix list --all' to see all templates", style="cyan")
         return
+    
+    # If a collection is loaded, check if the prompt is in it
+    if current_collection:
+        collection = manager.collection_storage.get_collection(current_collection)
+        if collection and not collection.has_template(name):
+            console.print(f"⚠️  Prompt '{name}' is not in the current collection '{current_collection}'", style="yellow")
+            console.print(f"💡 Add it with: aix collection-add {name}", style="cyan")
+            console.print(f"💡 Or unload collection with: aix collection-unload", style="cyan")
+            # Still allow execution, just warn the user
     
     # Handle auto-upgrade
     config_auto_upgrade = config.get("auto_upgrade", False)
@@ -345,7 +395,9 @@ def run(
                     console.print("\nOperation cancelled", style="yellow")
                     return
         else:
-            console.print(f"Use --param {list(missing_vars)[0]}=value to provide missing variables", style="red")
+            if missing_vars:
+                first_var = next(iter(missing_vars))
+                console.print(f"Use --param {first_var}=value to provide missing variables", style="red")
             return
     
     # Generate the final prompt
@@ -670,6 +722,258 @@ def perform_upgrade():
     except Exception as e:
         console.print(f"Upgrade failed: {e}", style="red")
         return False
+
+# Collection commands
+@app.command("collection-create")
+def collection_create(
+    name: str = typer.Argument(..., help="Name of the collection to create"),
+    description: str = typer.Option("", "--description", "-d", help="Description of the collection"),
+    templates: List[str] = typer.Option([], "--template", "-t", help="Template names to add to collection"),
+    tags: List[str] = typer.Option([], "--tag", help="Tags for the collection")
+):
+    """Create a new template collection."""
+    console = Console()
+    manager = CollectionManager()
+    
+    # Validate that all specified templates exist
+    storage = PromptStorage()
+    missing_templates = []
+    for template_name in templates:
+        if not storage.prompt_exists(template_name):
+            missing_templates.append(template_name)
+    
+    if missing_templates:
+        console.print(f"Error: Templates not found: {', '.join(missing_templates)}", style="red")
+        console.print("Use 'aix list' to see available templates", style="yellow")
+        return
+    
+    if manager.collection_storage.collection_exists(name):
+        console.print(f"Collection '{name}' already exists", style="red")
+        return
+    
+    success = manager.create_collection(name, description, templates, tags)
+    if success:
+        console.print(f"Created collection '{name}' with {len(templates)} templates", style="green")
+        if description:
+            console.print(f"Description: {description}")
+        if tags:
+            console.print(f"Tags: {', '.join(tags)}")
+    else:
+        console.print(f"Failed to create collection '{name}'", style="red")
+
+@app.command("collection-list")
+def collection_list():
+    """List all available collections."""
+    console = Console()
+    manager = CollectionManager()
+    
+    collections = manager.collection_storage.list_collections()
+    current_collection = manager.collection_storage.get_current_collection()
+    
+    if not collections:
+        console.print("No collections found", style="yellow")
+        console.print("Create a collection with: aix collection-create <name>", style="cyan")
+        return
+    
+    table = Table(title="Collections")
+    table.add_column("Name", style="cyan")
+    table.add_column("Description", style="white")
+    table.add_column("Templates", style="green", justify="center")
+    table.add_column("Tags", style="blue")
+    table.add_column("Status", style="magenta")
+    
+    for collection in collections:
+        status = "📌 Current" if collection.name == current_collection else ""
+        tags_str = ", ".join(collection.tags) if collection.tags else ""
+        
+        table.add_row(
+            collection.name,
+            collection.description[:50] + ("..." if len(collection.description) > 50 else ""),
+            str(len(collection.templates)),
+            tags_str,
+            status
+        )
+    
+    console.print(table)
+    
+    if current_collection:
+        console.print(f"\nCurrently loaded: {current_collection}", style="green")
+    else:
+        console.print("\nNo collection currently loaded", style="yellow")
+        console.print("Load a collection with: aix collection-load <name>", style="cyan")
+
+@app.command("collection-load")
+def collection_load(
+    name: str = typer.Argument(..., help="Name of the collection to load"),
+):
+    """Load a collection as the current working collection."""
+    console = Console()
+    manager = CollectionManager()
+    
+    if not manager.collection_storage.collection_exists(name):
+        console.print(f"Collection '{name}' not found", style="red")
+        console.print("Use 'aix collection-list' to see available collections", style="cyan")
+        return
+    
+    success = manager.load_collection(name)
+    if success:
+        collection = manager.collection_storage.get_collection(name)
+        console.print(f"Loaded collection '{name}'", style="green")
+        
+        if collection.description:
+            console.print(f"Description: {collection.description}")
+        
+        console.print(f"Templates: {len(collection.templates)}")
+        
+        # Show template validation
+        validation = manager.collection_storage.validate_collection_templates(name, manager.prompt_storage)
+        if validation["missing"]:
+            console.print(f"⚠️  Missing templates: {', '.join(validation['missing'])}", style="yellow")
+        
+        console.print("\nUse 'aix list' to see templates in this collection", style="cyan")
+    else:
+        console.print(f"Failed to load collection '{name}'", style="red")
+
+@app.command("collection-unload")
+def collection_unload():
+    """Unload the current collection."""
+    console = Console()
+    manager = CollectionManager()
+    
+    current = manager.collection_storage.get_current_collection()
+    if not current:
+        console.print("No collection currently loaded", style="yellow")
+        return
+    
+    success = manager.collection_storage.clear_current_collection()
+    if success:
+        console.print(f"Unloaded collection '{current}'", style="green")
+        console.print("Now working with all templates", style="cyan")
+    else:
+        console.print("Failed to unload collection", style="red")
+
+@app.command("collection-add")
+def collection_add(
+    template_name: str = typer.Argument(..., help="Name of the template to add"),
+):
+    """Add a template to the current collection."""
+    console = Console()
+    manager = CollectionManager()
+    
+    current = manager.collection_storage.get_current_collection()
+    if not current:
+        console.print("No collection currently loaded", style="red")
+        console.print("Load a collection with: aix collection-load <name>", style="cyan")
+        return
+    
+    if not manager.prompt_storage.prompt_exists(template_name):
+        console.print(f"Template '{template_name}' not found", style="red")
+        console.print("Use 'aix list --all' to see all available templates", style="cyan")
+        return
+    
+    success = manager.add_template_to_current_collection(template_name)
+    if success:
+        console.print(f"Added template '{template_name}' to collection '{current}'", style="green")
+    else:
+        console.print(f"Template '{template_name}' is already in collection '{current}'", style="yellow")
+
+@app.command("collection-remove")
+def collection_remove(
+    template_name: str = typer.Argument(..., help="Name of the template to remove"),
+):
+    """Remove a template from the current collection."""
+    console = Console()
+    manager = CollectionManager()
+    
+    current = manager.collection_storage.get_current_collection()
+    if not current:
+        console.print("No collection currently loaded", style="red")
+        console.print("Load a collection with: aix collection-load <name>", style="cyan")
+        return
+    
+    success = manager.remove_template_from_current_collection(template_name)
+    if success:
+        console.print(f"Removed template '{template_name}' from collection '{current}'", style="green")
+    else:
+        console.print(f"Template '{template_name}' not found in collection '{current}'", style="yellow")
+
+@app.command("collection-info")
+def collection_info(
+    name: Optional[str] = typer.Argument(None, help="Collection name (defaults to current)")
+):
+    """Show detailed information about a collection."""
+    console = Console()
+    manager = CollectionManager()
+    
+    if not name:
+        name = manager.collection_storage.get_current_collection()
+        if not name:
+            console.print("No collection currently loaded and no name specified", style="red")
+            return
+    
+    collection = manager.collection_storage.get_collection(name)
+    if not collection:
+        console.print(f"Collection '{name}' not found", style="red")
+        return
+    
+    # Create info panel
+    info_text = f"[bold cyan]{collection.name}[/bold cyan]\n"
+    if collection.description:
+        info_text += f"Description: {collection.description}\n"
+    if collection.tags:
+        info_text += f"Tags: {', '.join(collection.tags)}\n"
+    if collection.author:
+        info_text += f"Author: {collection.author}\n"
+    if collection.created_at:
+        info_text += f"Created: {collection.created_at[:10]}\n"
+    if collection.updated_at:
+        info_text += f"Updated: {collection.updated_at[:10]}\n"
+    
+    console.print(Panel(info_text, title="Collection Info"))
+    
+    # Show templates
+    if collection.templates:
+        validation = manager.collection_storage.validate_collection_templates(name, manager.prompt_storage)
+        
+        table = Table(title=f"Templates in '{name}'")
+        table.add_column("Template", style="cyan")
+        table.add_column("Status", style="green")
+        
+        for template_name in collection.templates:
+            status = "✅ Available" if template_name in validation["valid"] else "❌ Missing"
+            table.add_row(template_name, status)
+        
+        console.print(table)
+        
+        if validation["missing"]:
+            console.print(f"\n⚠️  {len(validation['missing'])} missing templates", style="yellow")
+    else:
+        console.print("No templates in this collection", style="yellow")
+
+@app.command("collection-delete")
+def collection_delete(
+    name: str = typer.Argument(..., help="Name of the collection to delete"),
+    force: bool = typer.Option(False, "--force", "-f", help="Skip confirmation prompt")
+):
+    """Delete a collection."""
+    console = Console()
+    manager = CollectionManager()
+    
+    if not manager.collection_storage.collection_exists(name):
+        console.print(f"Collection '{name}' not found", style="red")
+        return
+    
+    if not force:
+        confirm = typer.confirm(f"Are you sure you want to delete collection '{name}'?")
+        if not confirm:
+            console.print("Cancelled", style="yellow")
+            return
+    
+    success = manager.collection_storage.delete_collection(name)
+    if success:
+        console.print(f"Deleted collection '{name}'", style="green")
+    else:
+        console.print(f"Failed to delete collection '{name}'", style="red")
 
 @app.command()
 def upgrade():
