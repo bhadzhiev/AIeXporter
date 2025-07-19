@@ -1,3 +1,9 @@
+## v0.6.2 (2025-07-20)
+
+### Fix
+
+- resolve variable name collision in command output display
+
 ## v0.6.1 (2025-07-20)
 
 ### Fix
