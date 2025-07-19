@@ -1,3 +1,9 @@
+## v0.3.1 (2025-07-19)
+
+### Fix
+
+- sync __init__.py version with pyproject.toml (0.3.0)
+
 ## v0.3.0 (2025-07-19)
 
 ### Feat
