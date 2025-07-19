@@ -1,3 +1,9 @@
+## v0.3.0 (2025-07-19)
+
+### Feat
+
+- implement automated version bumping with pre-push git hook
+
 ## v0.2.14 (2025-07-19)
 
 ### Feat
