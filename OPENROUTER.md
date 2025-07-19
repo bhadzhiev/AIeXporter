@@ -76,7 +76,7 @@ aix config default_model "meta-llama/llama-3.2-3b-instruct:free"
 aix config default_model "openai/gpt-4-turbo"
 ```
 
-## 🔧 Configuration Commands
+## Configuration Commands
 
 ```bash
 # Set OpenRouter as default provider
@@ -133,7 +133,7 @@ aix config --list
 - **Paid models**: Range from $0.0001 to $0.03 per 1K tokens
 - **Usage dashboard**: https://openrouter.ai/keys
 
-## 🔄 Switching Between Models
+## Switching Between Models
 
 ```bash
 # Switch to free model
