@@ -27,11 +27,34 @@ def setup_api_key(provider: str) -> bool:
         }
     }
     
-    if provider not in provider_info:
-        console.print(f"Unsupported provider: {provider}", style="red")
-        return False
-    
-    info = provider_info[provider]
+    # Handle custom providers
+    if provider.startswith("custom:"):
+        provider_name = provider[7:]  # Remove "custom:" prefix
+        custom_providers = config.get_custom_providers()
+        
+        if provider_name not in custom_providers:
+            console.print(f"Custom provider '{provider_name}' not found", style="red")
+            console.print("Available custom providers:", style="yellow")
+            for name in custom_providers.keys():
+                console.print(f"  custom:{name}", style="dim")
+            console.print("Add a custom provider with: aix provider add <name> <base-url>", style="cyan")
+            return False
+        
+        custom_config = custom_providers[provider_name]
+        info = {
+            "name": f"{provider_name} (Custom Provider)",
+            "signup_url": custom_config.get("base_url", "N/A"),
+            "description": f"Custom provider: {custom_config.get('base_url', 'Unknown URL')}"
+        }
+    else:
+        # Handle built-in providers
+        if provider not in provider_info:
+            console.print(f"Unsupported provider: {provider}", style="red")
+            console.print("Supported providers: openrouter, openai, anthropic", style="yellow")
+            console.print("For custom providers, use: custom:<provider-name>", style="cyan")
+            return False
+        
+        info = provider_info[provider]
     
     console.print(f"\nSetting up {info['name']} API Key", style="bold cyan")
     console.print(f"Description: {info['description']}")
@@ -56,7 +79,7 @@ def setup_api_key(provider: str) -> bool:
     
     if success:
         console.print(f"{info['name']} API key saved successfully!", style="green")
-        console.print(f"Test it with: python main.py run your-prompt --execute --provider {provider}", style="dim")
+        console.print(f"Test it with: aix run your-prompt --execute --provider {provider}", style="dim")
         return True
     else:
         console.print(f"Failed to save API key for {provider}", style="red")
