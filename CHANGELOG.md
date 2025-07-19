@@ -1,3 +1,9 @@
+## v0.6.1 (2025-07-20)
+
+### Fix
+
+- configure commitizen to auto-sync __init__.py version
+
 ## v0.6.0 (2025-07-20)
 
 ### Feat
