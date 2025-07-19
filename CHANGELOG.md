@@ -1,7 +1,14 @@
-## Unreleased
+## v0.2.0 (2025-07-19)
 
 ### Feat
 
+- add IDE files and prompts directory to gitignore
+
+## v0.1.0 (2025-07-19)
+
+### Feat
+
+- add commitizen for semantic versioning and changelog management
 - implement all missing CLI commands and enhance existing functionality
 - add auto-upgrade functionality to run command
 - add self-upgrade command via aix upgrade

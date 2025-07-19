@@ -23,7 +23,12 @@
       "Bash(pip install:*)",
       "Bash(mv:*)",
       "Bash(grep:*)",
-      "Bash(true)"
+      "Bash(true)",
+      "Bash(cz version:*)",
+      "Bash(cz changelog:*)",
+      "Bash(cz bump:*)",
+      "Bash(git tag:*)",
+      "Bash(chmod:*)"
     ],
     "deny": []
   }
