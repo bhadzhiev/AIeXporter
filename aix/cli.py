@@ -408,8 +408,8 @@ def run(
         
         if command_outputs:
             console.print("Executed commands:", style="blue")
-            for cmd_placeholder, output in command_outputs.items():
-                console.print(f"  {cmd_placeholder} → {output[:100]}{'...' if len(output) > 100 else ''}", style="dim")
+            for cmd_placeholder, cmd_output in command_outputs.items():
+                console.print(f"  {cmd_placeholder} → {cmd_output[:100]}{'...' if len(cmd_output) > 100 else ''}", style="dim")
     else:
         generated_prompt = prompt.render_simple(param_dict)
     
