@@ -49,7 +49,8 @@
       "Bash(aix:*)",
       "Bash(uv tool:*)",
       "Bash(cp:*)",
-      "Bash(make:*)"
+      "Bash(make:*)",
+      "Bash(curl:*)"
     ],
     "deny": []
   }
