@@ -1,3 +1,14 @@
+## v0.16.0 (2025-07-20)
+
+### BREAKING CHANGE
+
+- CommandExecutor API updated, old direct method calls replaced
+with factory pattern usage. All tests updated and passing.
+
+### Refactor
+
+- implement Command pattern for command execution
+
 ## v0.15.0 (2025-07-20)
 
 ### Feat
