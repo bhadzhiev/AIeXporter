@@ -1,3 +1,13 @@
+## v0.7.0 (2025-07-20)
+
+### BREAKING CHANGE
+
+- Remove YAML+TXT format support, XML and directories are now the only supported formats
+
+### Feat
+
+- default to XML templates and directory-based collections
+
 ## v0.6.2 (2025-07-20)
 
 ### Fix
