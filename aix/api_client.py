@@ -220,15 +220,32 @@ class CustomAPIClient(BaseAPIClient):
         base_url: str,
         headers: Dict[str, str] = None,
         provider_name: str = "custom",
+        auth_type: str = "bearer",
     ):
         super().__init__(api_key, base_url)
         self.custom_headers = headers or {}
         self.provider_name = provider_name
+        self.auth_type = auth_type
+
+    def _get_auth_headers(self) -> Dict[str, str]:
+        """Get authentication headers based on auth_type."""
+        if self.auth_type == "bearer":
+            return {"Authorization": f"Bearer {self.api_key}"}
+        elif self.auth_type == "api-key":
+            return {"Authorization": f"Api-Key {self.api_key}"}
+        elif self.auth_type == "x-api-key":
+            return {"X-API-Key": self.api_key}
+        else:
+            # Default to bearer if unknown auth_type
+            return {"Authorization": f"Bearer {self.api_key}"}
 
     def generate(self, prompt: str, model: str = None, **kwargs) -> APIResponse:
+        # Build authentication header based on auth_type
+        auth_headers = self._get_auth_headers()
+        
         headers = {
-            "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",
+            **auth_headers,
             **self.custom_headers,
         }
 
@@ -282,9 +299,12 @@ class CustomAPIClient(BaseAPIClient):
     def stream_generate(
         self, prompt: str, model: str = None, **kwargs
     ) -> Generator[str, None, None]:
+        # Build authentication header based on auth_type
+        auth_headers = self._get_auth_headers()
+        
         headers = {
-            "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",
+            **auth_headers,
             **self.custom_headers,
         }
 
@@ -422,6 +442,7 @@ def get_client(
             base_url=custom_config["base_url"],
             headers=custom_config.get("headers", {}),
             provider_name=custom_config.get("name", "custom"),
+            auth_type=custom_config.get("auth_type", "bearer"),
         )
     else:
         raise ValueError(f"Unsupported provider: {provider}")
