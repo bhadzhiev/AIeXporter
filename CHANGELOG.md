@@ -1,3 +1,9 @@
+## v0.10.0 (2025-07-20)
+
+### Feat
+
+- enhance CustomAPIClient to support different authentication types
+
 ## v0.9.1 (2025-07-20)
 
 ### Fix
