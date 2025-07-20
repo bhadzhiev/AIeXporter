@@ -150,6 +150,7 @@ class CollectionStorage:
             templates_elem = ET.SubElement(root, "templates")
             
             # Load and embed each template
+            template_idx = 0
             for template_name in collection.templates:
                 template = self._load_template_for_collection(template_name)
                 if template:
@@ -162,9 +163,19 @@ class CollectionStorage:
                     ET.SubElement(tmpl_metadata, "created_at").text = template.created_at
                     ET.SubElement(tmpl_metadata, "updated_at").text = template.updated_at
                     
+                    # Placeholder generators
+                    if template.placeholder_generators:
+                        generators_elem = ET.SubElement(tmpl_metadata, "placeholder_generators")
+                        for gen_idx, generator in enumerate(template.placeholder_generators):
+                            gen_elem = ET.SubElement(generators_elem, "placeholder_generator")
+                            gen_elem.set("language", generator.language)
+                            gen_elem.text = f"PLACEHOLDER_GENERATOR_CDATA_{generator.language}_{template_idx}_{gen_idx}"
+                    
                     # Template content with CDATA
                     content_elem = ET.SubElement(template_elem, "content")
                     content_elem.text = "PLACEHOLDER_FOR_CDATA"
+                    
+                    template_idx += 1
             
             # Convert to string and replace placeholders with CDATA
             xml_string = ET.tostring(root, encoding="unicode")
@@ -177,8 +188,17 @@ class CollectionStorage:
             for template_name in collection.templates:
                 template = self._load_template_for_collection(template_name)
                 if template:
+                    # Replace template content
                     cdata_content = f"<![CDATA[{template.template}]]>"
                     xml_string = xml_string.replace("PLACEHOLDER_FOR_CDATA", cdata_content, 1)
+                    
+                    # Replace placeholder generator CDATA sections
+                    if template.placeholder_generators:
+                        for gen_idx, generator in enumerate(template.placeholder_generators):
+                            placeholder = f"PLACEHOLDER_GENERATOR_CDATA_{generator.language}_{template_idx}_{gen_idx}"
+                            cdata_script = f"<![CDATA[{generator.script}]]>"
+                            xml_string = xml_string.replace(placeholder, cdata_script)
+                    
                     template_idx += 1
             
             # Write to file
@@ -433,8 +453,21 @@ class CollectionStorage:
                                 "description": template_metadata.findtext("description", ""),
                                 "created_at": template_metadata.findtext("created_at", ""),
                                 "updated_at": template_metadata.findtext("updated_at", ""),
-                                "template": ""
+                                "template": "",
+                                "placeholder_generators": []
                             }
+                            
+                            # Parse placeholder generators
+                            generators_elem = template_metadata.find("placeholder_generators")
+                            if generators_elem is not None:
+                                for gen_elem in generators_elem.findall("placeholder_generator"):
+                                    language = gen_elem.get("language", "")
+                                    script = gen_elem.text or ""
+                                    if language and script:
+                                        template_data["placeholder_generators"].append({
+                                            "language": language,
+                                            "script": script
+                                        })
                             
                             # Get content (handle CDATA)
                             content_elem = template_elem.find("content")

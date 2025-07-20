@@ -6,7 +6,8 @@ AIX supports adding custom API providers for any OpenAI-compatible endpoint. Thi
 
 ```bash
 # Add a custom provider (e.g., local Ollama)
-aix provider add "ollama" "http://localhost:11434/v1" \
+aix provider add "ollama" "h
+ttp://localhost:11434/v1" \
   --model "llama3.2" \
   --header "X-Custom-Header:value"
 

@@ -8,12 +8,19 @@ from .command_executor import CommandExecutor
 
 
 @dataclass
+class PlaceholderGenerator:
+    language: str
+    script: str
+
+
+@dataclass
 class PromptTemplate:
     name: str
     template: str
     description: str = ""
     tags: List[str] = None
     variables: List[str] = None
+    placeholder_generators: List[PlaceholderGenerator] = None
     created_at: Optional[str] = None
     updated_at: Optional[str] = None
 
@@ -22,6 +29,8 @@ class PromptTemplate:
             self.tags = []
         if self.variables is None:
             self.variables = self.extract_variables(self.template)
+        if self.placeholder_generators is None:
+            self.placeholder_generators = []
         if self.created_at is None:
             self.created_at = datetime.now().isoformat()
         self.updated_at = datetime.now().isoformat()
@@ -48,6 +57,7 @@ class PromptTemplate:
         variables: Dict[str, str],
         execute_commands: bool = False,
         command_executor: Optional[CommandExecutor] = None,
+        execute_generators: bool = True,
     ) -> Tuple[str, Optional[Dict[str, str]]]:
         """
         Render the template with provided variables and optionally execute commands.
@@ -56,20 +66,41 @@ class PromptTemplate:
             variables: Dictionary of variable substitutions
             execute_commands: Whether to execute embedded commands
             command_executor: CommandExecutor instance for running commands
+            execute_generators: Whether to execute placeholder generators
 
         Returns:
             Tuple of (rendered_template, command_outputs or None)
         """
+        # Start with the provided variables
+        all_variables = dict(variables)
+        
+        # Execute placeholder generators if enabled
+        if execute_generators and self.placeholder_generators:
+            try:
+                from .placeholder_generator import PlaceholderExecutor
+                executor = PlaceholderExecutor()
+                generated_placeholders = executor.execute_generators(self.placeholder_generators)
+                
+                # Merge generated placeholders with provided variables
+                # Provided variables take precedence over generated ones
+                for key, value in generated_placeholders.items():
+                    if key not in all_variables:
+                        all_variables[key] = value
+                        
+            except Exception as e:
+                # Log warning but continue with template rendering
+                print(f"Warning: Placeholder generation failed: {e}")
+        
         if execute_commands and command_executor:
             # Use command executor to process template with commands
             result, command_outputs = command_executor.process_template(
-                self.template, variables
+                self.template, all_variables
             )
             return result, command_outputs
         else:
             # Standard variable substitution only
             result = self.template
-            for var, value in variables.items():
+            for var, value in all_variables.items():
                 result = result.replace(f"{{{var}}}", value)
             return result, None
 
@@ -92,6 +123,18 @@ class PromptTemplate:
     @classmethod
     def from_dict(cls, data: Dict) -> "PromptTemplate":
         """Create instance from dictionary."""
+        # Handle placeholder_generators conversion
+        generators_data = data.get('placeholder_generators', [])
+        if generators_data:
+            generators = []
+            for gen_data in generators_data:
+                if isinstance(gen_data, dict):
+                    generators.append(PlaceholderGenerator(**gen_data))
+                elif isinstance(gen_data, PlaceholderGenerator):
+                    generators.append(gen_data)
+            data = dict(data)  # Make a copy
+            data['placeholder_generators'] = generators
+        
         return cls(**data)
 
     def to_xml(self) -> str:
@@ -119,6 +162,14 @@ class PromptTemplate:
             for var in self.variables:
                 ET.SubElement(variables_elem, "variable").text = var
         
+        # Placeholder generators
+        if self.placeholder_generators:
+            generators_elem = ET.SubElement(metadata, "placeholder_generators")
+            for generator in self.placeholder_generators:
+                gen_elem = ET.SubElement(generators_elem, "placeholder_generator")
+                gen_elem.set("language", generator.language)
+                gen_elem.text = f"PLACEHOLDER_GENERATOR_CDATA_{generator.language}"
+        
         # Content section - will be replaced with CDATA manually
         content = ET.SubElement(root, "content")
         content.text = "PLACEHOLDER_FOR_CDATA"
@@ -130,6 +181,13 @@ class PromptTemplate:
         # Replace placeholder with CDATA section
         cdata_content = f"<![CDATA[{self.template}]]>"
         xml_string = xml_string.replace("PLACEHOLDER_FOR_CDATA", cdata_content)
+        
+        # Replace placeholder generator CDATA sections
+        if self.placeholder_generators:
+            for generator in self.placeholder_generators:
+                placeholder = f"PLACEHOLDER_GENERATOR_CDATA_{generator.language}"
+                cdata_script = f"<![CDATA[{generator.script}]]>"
+                xml_string = xml_string.replace(placeholder, cdata_script)
         
         return xml_string
 
@@ -172,6 +230,16 @@ class PromptTemplate:
                     if var_elem.text:
                         variables.append(var_elem.text)
             
+            # Extract placeholder generators
+            placeholder_generators = []
+            generators_elem = metadata.find("placeholder_generators")
+            if generators_elem is not None:
+                for gen_elem in generators_elem.findall("placeholder_generator"):
+                    language = gen_elem.get("language", "")
+                    script = gen_elem.text or ""
+                    if language and script:
+                        placeholder_generators.append(PlaceholderGenerator(language=language, script=script))
+            
             # Extract content (handle both CDATA and regular text)
             content_elem = root.find("content")
             if content_elem is not None:
@@ -198,6 +266,7 @@ class PromptTemplate:
                 description=description,
                 tags=tags,
                 variables=variables,
+                placeholder_generators=placeholder_generators,
                 created_at=created_at,
                 updated_at=updated_at
             )
