@@ -13,8 +13,8 @@
 ## v0.8.0 (2025-07-20)
 
 ### BREAKING CHANGE
-
-- Commands are now enabled by default, --enable-commands replaced with --disable-commands
+ 
+- Command are now enabled by default, --enable-commands replaced with --disable-commands
 
 ### Feat 
 
