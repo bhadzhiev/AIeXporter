@@ -45,13 +45,6 @@ class CommandExecutor:
             "su",
             "doas",
             "runas",
-            "mv",  # Can be dangerous when moving system files
-            "cp /",  # Dangerous when copying to root
-            "rsync /",  # Dangerous when syncing to root
-            "tar --",  # Dangerous tar operations
-            "gzip -d /",  # Dangerous decompression
-            "gunzip /",
-            "unzip /",
             "wget",  # Network access
             "curl",  # Network access
             "ssh",  # Network access
@@ -61,13 +54,6 @@ class CommandExecutor:
             "nc",  # Network access
             "netcat",  # Network access
             "telnet",  # Network access
-            "ping -f",  # Flood ping
-            "fork",  # Fork bomb potential
-            ":()",  # Fork bomb
-            "eval",  # Code injection
-            "exec",  # Code execution
-            "source",  # Script execution
-            ".",  # Script execution (dot command)
         ]
         self.working_dir = working_dir or Path.cwd()
 
@@ -88,8 +74,16 @@ class CommandExecutor:
             
             # Check against disabled commands
             for disabled in self.disabled_commands:
-                if base_command.startswith(disabled) or disabled in command_lower:
+                # For exact command matching
+                if base_command == disabled:
                     return False
+                # For prefix matching (like rm, mv, etc)
+                if base_command.startswith(disabled + " ") or base_command.startswith(disabled + "\t"):
+                    return False
+                # For special patterns that should be checked in full command
+                if disabled.endswith(" /") or disabled.startswith(":") or disabled == ".":
+                    if disabled in command_lower:
+                        return False
                     
             # Additional security checks
             if self._contains_dangerous_patterns(command):
@@ -109,8 +103,15 @@ class CommandExecutor:
             r"dd\s+.*of\s*=\s*/dev/",  # dd to devices
             r"chmod\s+777\s+/",  # chmod 777 /
             r"chown\s+.*\s+/",  # chown root files
-            r"\|\s*sh",  # piping to shell
+            r"\|\s*sh\s*$",  # piping to shell at end of command
             r"\$\(.*\$\(.*\).*\)",  # nested command substitution (potential injection)
+            r"^\s*eval\s+",  # eval at start of command
+            r"^\s*exec\s+",  # exec at start of command  
+            r"^\s*source\s+",  # source at start of command
+            r"^\s*\.\s+",  # dot command at start
+            r"mv\s+.*\s+/",  # mv to root
+            r"cp\s+.*\s+/\s*$",  # cp to root
+            r"rsync\s+.*\s+/\s*$",  # rsync to root
         ]
         
         for pattern in dangerous_patterns:
