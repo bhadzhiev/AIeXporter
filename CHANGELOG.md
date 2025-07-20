@@ -1,3 +1,13 @@
+## v0.12.0 (2025-07-20)
+
+### Feat
+
+- implement XML-based collections with embedded templates and system prompts
+
+### Fix
+
+- enable template resolution from XML collections in CLI run command
+
 ## v0.11.0 (2025-07-20)
 
 ### Feat
