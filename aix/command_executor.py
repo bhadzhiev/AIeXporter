@@ -10,56 +10,69 @@ class CommandExecutor:
 
     def __init__(
         self,
-        allowed_commands: Optional[List[str]] = None,
+        disabled_commands: Optional[List[str]] = None,
         working_dir: Optional[Path] = None,
     ):
         """
         Initialize command executor with security constraints.
 
         Args:
-            allowed_commands: List of allowed command prefixes. If None, all commands are allowed.
+            disabled_commands: List of disabled command prefixes. If None, uses default dangerous commands list.
             working_dir: Working directory for command execution. Defaults to current directory.
         """
-        self.allowed_commands = allowed_commands or [
-            "git",
-            "ls",
-            "pwd",
-            "date",
-            "whoami",
-            "hostname",
-            "uname",
-            "cat",
-            "head",
-            "tail",
-            "wc",
-            "grep",
-            "find",
-            "which",
-            "whereis",
-            "python",
-            "python3",
-            "python3.11",
-            "python3.12",
-            "/usr/bin/python3",
-            "pip",
-            "pip3",
-            "npm",
-            "node",
-            "nodejs",
-            "cargo",
-            "go",
-            "java",
-            "docker",
-            "podman",
-            "kubectl",
-            "terraform",
-            "ansible",
-            "echo",
+        self.disabled_commands = disabled_commands or [
+            "rm",
+            "rmdir",
+            "del",
+            "delete",
+            "format",
+            "fdisk",
+            "mkfs",
+            "dd",
+            "shutdown",
+            "reboot",
+            "halt",
+            "poweroff",
+            "init",
+            "kill",
+            "killall",
+            "pkill",
+            "chmod",
+            "chown",
+            "chgrp",
+            "passwd",
+            "sudo",
+            "su",
+            "doas",
+            "runas",
+            "mv",  # Can be dangerous when moving system files
+            "cp /",  # Dangerous when copying to root
+            "rsync /",  # Dangerous when syncing to root
+            "tar --",  # Dangerous tar operations
+            "gzip -d /",  # Dangerous decompression
+            "gunzip /",
+            "unzip /",
+            "wget",  # Network access
+            "curl",  # Network access
+            "ssh",  # Network access
+            "scp",  # Network access
+            "ftp",  # Network access
+            "sftp",  # Network access
+            "nc",  # Network access
+            "netcat",  # Network access
+            "telnet",  # Network access
+            "ping -f",  # Flood ping
+            "fork",  # Fork bomb potential
+            ":()",  # Fork bomb
+            "eval",  # Code injection
+            "exec",  # Code execution
+            "source",  # Script execution
+            ".",  # Script execution (dot command)
         ]
         self.working_dir = working_dir or Path.cwd()
 
     def is_command_allowed(self, command: str) -> bool:
-        """Check if a command is allowed to be executed."""
+        """Check if a command is allowed to be executed (not in disabled list)."""
         if not command.strip():
             return False
 
@@ -69,14 +82,42 @@ class CommandExecutor:
             if not parsed:
                 return False
             base_command = parsed[0]
-
-            # Check against allowed commands
-            return any(
-                base_command.startswith(allowed) for allowed in self.allowed_commands
-            )
+            
+            # Check the full command line against disabled patterns
+            command_lower = command.lower().strip()
+            
+            # Check against disabled commands
+            for disabled in self.disabled_commands:
+                if base_command.startswith(disabled) or disabled in command_lower:
+                    return False
+                    
+            # Additional security checks
+            if self._contains_dangerous_patterns(command):
+                return False
+                
+            return True
         except ValueError:
             # Invalid shell syntax
             return False
+            
+    def _contains_dangerous_patterns(self, command: str) -> bool:
+        """Check for dangerous command patterns."""
+        dangerous_patterns = [
+            r"rm\s+-rf\s+/",  # rm -rf /
+            r":\(\)\s*\{\s*:\|:\&\s*\}\s*;\s*:",  # fork bomb
+            r"\>\s*/dev/sd[a-z]",  # writing to disk devices
+            r"dd\s+.*of\s*=\s*/dev/",  # dd to devices
+            r"chmod\s+777\s+/",  # chmod 777 /
+            r"chown\s+.*\s+/",  # chown root files
+            r"\|\s*sh",  # piping to shell
+            r"\$\(.*\$\(.*\).*\)",  # nested command substitution (potential injection)
+        ]
+        
+        for pattern in dangerous_patterns:
+            if re.search(pattern, command, re.IGNORECASE):
+                return True
+                
+        return False
 
     def execute_command(self, command: str, timeout: int = 30) -> Tuple[bool, str, str]:
         """
@@ -90,7 +131,7 @@ class CommandExecutor:
             Tuple of (success: bool, stdout: str, stderr: str)
         """
         if not self.is_command_allowed(command):
-            return False, "", f"Command not allowed: {command}"
+            return False, "", f"Command disabled for security: {command}"
 
         try:
             result = subprocess.run(
@@ -397,7 +438,7 @@ class CommandExecutor:
         info = {}
 
         if not self.is_command_allowed(command):
-            info["error"] = f"Command not allowed: {command}"
+            info["error"] = f"Command disabled for security: {command}"
             return info
 
         # Try to get version

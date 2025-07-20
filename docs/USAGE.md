@@ -39,10 +39,14 @@ aix run sys-info --execute
 
 ### Command Execution Safety
 
-By default, command execution is disabled. Use `--enable-commands` to allow it:
+Command execution is enabled by default but restricted by security patterns. Use `--disable-commands` to disable it:
 
 ```bash
-aix run my-prompt --execute --enable-commands
+# Commands enabled by default
+aix run my-prompt --execute
+
+# Disable commands if needed
+aix run my-prompt --execute --disable-commands
 ```
 
 ## Auto-Upgrade Magic

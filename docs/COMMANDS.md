@@ -28,8 +28,11 @@ aix run prompt-name --stream --execute
 # Save to file
 aix run prompt-name --output result.txt --execute
 
-# Enable command execution
-aix run prompt-name --enable-commands --execute
+# Command execution is enabled by default
+aix run prompt-name --execute
+
+# Disable command execution if needed
+aix run prompt-name --disable-commands --execute
 ```
 
 ### `aix list` - List Prompts

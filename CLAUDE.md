@@ -85,16 +85,17 @@ The codebase follows a modular, layered architecture:
 
 ### Template Variable System
 - `{variable}` - Standard variable substitution
-- `$(command)` - Shell command execution (requires `--enable-commands`)
+- `$(command)` - Shell command execution (enabled by default, use `--disable-commands` to disable)
 - `{cmd:command}` - Alternative command syntax
 - `{exec:command}` - Explicit command execution syntax
 
 ### Security Model
-- Command execution disabled by default
-- Allowlisted commands only (see `command_executor.py`)
-- 30-second timeout for all command execution
+- Command execution enabled by default with security restrictions
+- Dangerous commands disabled by security patterns (see `command_executor.py`)
+- 30-second timeout for all command execution  
 - API keys stored securely in `~/.prompts/config.json`
 - No command injection via template variables
+- Use `--disable-commands` flag to disable command execution when needed
 
 ### Storage Architecture
 - Prompts directory: `~/.prompts/`

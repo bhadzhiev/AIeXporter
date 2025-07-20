@@ -15,13 +15,17 @@ def test_cmd(
     ),
 ):
     """Test a command to see if it's allowed and get its output."""
-    executor = CommandExecutor()
+    from .config import Config
+    config = Config()
+    
+    disabled_commands = config.get_disabled_commands()
+    executor = CommandExecutor(disabled_commands=disabled_commands or None)
 
     # Check if command is allowed
     if not executor.is_command_allowed(command):
-        console.print(f"Command not allowed: {command}", style="red")
-        console.print("Allowed command prefixes:", style="yellow")
-        for cmd in executor.allowed_commands:
+        console.print(f"Command disabled for security: {command}", style="red")
+        console.print("Disabled command patterns:", style="yellow")
+        for cmd in executor.disabled_commands:
             console.print(f"  - {cmd}", style="dim")
         return
 
@@ -43,30 +47,31 @@ def test_cmd(
 
 
 def show_commands():
-    """Show allowed commands and their information."""
-    executor = CommandExecutor()
+    """Show command execution status and disabled commands."""
+    from .config import Config
+    config = Config()
+    
+    disabled_commands = config.get_disabled_commands()
+    executor = CommandExecutor(disabled_commands=disabled_commands or None)
+    commands_enabled = config.get_commands_enabled()
 
-    console.print("Allowed Commands", style="bold cyan")
+    console.print("Command Execution Status", style="bold cyan")
+    console.print(f"Commands enabled globally: {commands_enabled}", style="green" if commands_enabled else "red")
+    
+    if disabled_commands:
+        console.print("\nDisabled Commands:", style="bold red")
+        table = Table()
+        table.add_column("Disabled Pattern", style="red")
+        table.add_column("Reason", style="dim")
 
-    table = Table()
-    table.add_column("Command", style="cyan")
-    table.add_column("Status", style="green")
-    table.add_column("Version/Info", style="dim")
-
-    for cmd in executor.allowed_commands:
-        # Try to get command info
-        info = executor.get_command_info(cmd)
-
-        if "error" in info:
-            status = "Not found"
-            version = info["error"]
-        else:
-            status = "Available"
-            version = info.get("version", "Unknown")
-
-        table.add_row(cmd, status, version)
-
-    console.print(table)
+        for cmd in disabled_commands:
+            table.add_row(cmd, "Security restriction")
+        
+        console.print(table)
+    else:
+        console.print("\nNo additional disabled commands (using default security list)", style="dim")
+        
+    console.print("\n[dim]Note: Commands are enabled by default but restricted by security patterns[/dim]")
 
 
 def template_test(
@@ -76,7 +81,11 @@ def template_test(
     ),
 ):
     """Test a template with command execution."""
-    executor = CommandExecutor()
+    from .config import Config
+    config = Config()
+    
+    disabled_commands = config.get_disabled_commands()
+    executor = CommandExecutor(disabled_commands=disabled_commands or None)
 
     # Parse variables
     variables = {}

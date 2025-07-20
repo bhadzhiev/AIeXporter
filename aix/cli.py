@@ -416,8 +416,8 @@ def run(
     execute: bool = typer.Option(
         False, "--execute", "-e", help="Execute the prompt via API"
     ),
-    enable_commands: bool = typer.Option(
-        False, "--enable-commands", help="Enable command execution in templates"
+    disable_commands: bool = typer.Option(
+        False, "--disable-commands", help="Disable command execution in templates"
     ),
     auto_upgrade: bool = typer.Option(
         False, "--auto-upgrade", help="Auto-upgrade aix before execution"
@@ -503,9 +503,11 @@ def run(
             return
 
     # Generate the final prompt
-    if enable_commands:
-        # Execute commands in the template
-        executor = CommandExecutor()
+    commands_enabled = config.get_commands_enabled() and not disable_commands
+    if commands_enabled:
+        # Execute commands in the template (enabled by default)
+        disabled_commands = config.get_disabled_commands()
+        executor = CommandExecutor(disabled_commands=disabled_commands or None)
         generated_prompt, command_outputs = prompt.render(
             param_dict, execute_commands=True, command_executor=executor
         )

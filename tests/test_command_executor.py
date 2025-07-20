@@ -9,41 +9,43 @@ class TestCommandExecutor:
         """Test executor initialization with default settings."""
         executor = CommandExecutor()
 
-        # Default allowed commands should be populated
-        assert len(executor.allowed_commands) > 0
-        assert "git" in executor.allowed_commands
-        assert "python" in executor.allowed_commands
+        # Default disabled commands should be populated
+        assert len(executor.disabled_commands) > 0
+        assert "rm" in executor.disabled_commands
+        assert "sudo" in executor.disabled_commands
         assert executor.working_dir == Path.cwd()
 
     def test_initialization_with_custom_settings(self, temp_dir):
         """Test executor initialization with custom settings."""
-        custom_commands = ["echo", "ls", "cat"]
+        custom_disabled = ["rm", "sudo", "dangerous-cmd"]
         executor = CommandExecutor(
-            allowed_commands=custom_commands, working_dir=temp_dir
+            disabled_commands=custom_disabled, working_dir=temp_dir
         )
 
-        assert executor.allowed_commands == custom_commands
+        assert executor.disabled_commands == custom_disabled
         assert executor.working_dir == temp_dir
 
     def test_is_command_allowed_allowed(self):
         """Test allowed command detection."""
-        executor = CommandExecutor(allowed_commands=["echo", "ls", "cat"])
+        executor = CommandExecutor(disabled_commands=["rm", "sudo"])
 
         assert executor.is_command_allowed("echo hello") is True
         assert executor.is_command_allowed("ls -la") is True
         assert executor.is_command_allowed("cat file.txt") is True
+        assert executor.is_command_allowed("git status") is True
 
     def test_is_command_allowed_not_allowed(self):
         """Test disallowed command detection."""
-        executor = CommandExecutor(allowed_commands=["echo", "ls"])
+        executor = CommandExecutor(disabled_commands=["rm", "sudo", "dangerous"])
 
         assert executor.is_command_allowed("rm -rf /") is False
         assert executor.is_command_allowed("sudo apt-get install") is False
+        assert executor.is_command_allowed("dangerous command") is False
         assert executor.is_command_allowed("") is False
 
     def test_execute_allowed_command(self):
         """Test executing an allowed command."""
-        executor = CommandExecutor(allowed_commands=["echo"])
+        executor = CommandExecutor(disabled_commands=["rm", "sudo"])  # echo not disabled
 
         success, stdout, stderr = executor.execute_command("echo hello")
 
@@ -53,7 +55,7 @@ class TestCommandExecutor:
 
     def test_execute_command_in_working_dir(self, temp_dir):
         """Test command execution in specific working directory."""
-        executor = CommandExecutor(allowed_commands=["pwd"], working_dir=temp_dir)
+        executor = CommandExecutor(disabled_commands=["rm"], working_dir=temp_dir)  # pwd not disabled
 
         success, stdout, stderr = executor.execute_command("pwd")
 
@@ -62,17 +64,17 @@ class TestCommandExecutor:
 
     def test_execute_disallowed_command(self):
         """Test executing a disallowed command."""
-        executor = CommandExecutor(allowed_commands=["echo"])
+        executor = CommandExecutor(disabled_commands=["rm"])
 
         success, stdout, stderr = executor.execute_command("rm nonexistent")
 
         assert success is False
         assert stdout == ""
-        assert "Command not allowed: rm nonexistent" in stderr
+        assert "Command disabled for security: rm nonexistent" in stderr
 
     def test_execute_command_timeout(self):
         """Test command timeout functionality."""
-        executor = CommandExecutor(allowed_commands=["sleep"])
+        executor = CommandExecutor(disabled_commands=["rm"])  # sleep not disabled
 
         # Sleep command should timeout
         success, stdout, stderr = executor.execute_command("sleep 2", timeout=1)
@@ -134,7 +136,7 @@ class TestCommandExecutor:
 
     def test_process_template_with_commands(self):
         """Test processing template with commands."""
-        executor = CommandExecutor(allowed_commands=["whoami", "echo"])
+        executor = CommandExecutor(disabled_commands=["rm"])  # whoami, echo not disabled
 
         template = "Hello $(echo world), user: $(whoami)"
         result, command_outputs = executor.process_template(template)
@@ -156,7 +158,7 @@ class TestCommandExecutor:
 
     def test_process_template_with_variables_and_commands(self):
         """Test processing template with both variables and commands."""
-        executor = CommandExecutor(allowed_commands=["whoami"])
+        executor = CommandExecutor(disabled_commands=["rm"])  # whoami not disabled
 
         template = "Hello {name}, user: $(whoami)"
         variables = {"name": "Alice"}
@@ -168,7 +170,7 @@ class TestCommandExecutor:
 
     def test_get_command_info_allowed(self):
         """Test getting info for allowed commands."""
-        executor = CommandExecutor(allowed_commands=["echo"])
+        executor = CommandExecutor(disabled_commands=["rm"])  # echo not disabled
 
         info = executor.get_command_info("echo")
 
@@ -178,12 +180,12 @@ class TestCommandExecutor:
 
     def test_get_command_info_disallowed(self):
         """Test getting info for disallowed commands."""
-        executor = CommandExecutor(allowed_commands=["echo"])
+        executor = CommandExecutor(disabled_commands=["rm"])
 
         info = executor.get_command_info("rm")
 
         assert "error" in info
-        assert "Command not allowed" in info["error"]
+        assert "Command disabled for security" in info["error"]
 
     def test_invalid_command_syntax(self):
         """Test handling of invalid command syntax."""
@@ -199,7 +201,7 @@ class TestCommandExecutor:
 
     def test_command_with_spaces(self):
         """Test commands with spaces and arguments."""
-        executor = CommandExecutor(allowed_commands=["echo"])
+        executor = CommandExecutor(disabled_commands=["rm"])  # echo not disabled
 
         success, stdout, stderr = executor.execute_command("echo 'hello world'")
 
@@ -213,4 +215,4 @@ class TestCommandExecutor:
         success, stdout, stderr = executor.execute_command("")
 
         assert success is False
-        assert "Command not allowed" in stderr
+        assert "Command disabled for security" in stderr

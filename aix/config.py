@@ -25,7 +25,7 @@ class Config:
             # Create default config
             default_config = {
                 "storage_path": str(Path.home() / ".prompts"),
-                "default_format": "yaml",
+                "default_format": "xml",
                 "editor": "nano",
                 "auto_backup": True,
                 "max_backups": 5,
@@ -37,6 +37,8 @@ class Config:
                 "temperature": 0.7,
                 "auto_upgrade": False,
                 "custom_providers": {},
+                "commands_enabled": True,
+                "disabled_commands": [],
             }
             self._save_config(default_config)
             return default_config
@@ -97,7 +99,7 @@ class Config:
 
     def get_default_format(self) -> str:
         """Get the default file format for new prompts."""
-        return self.get("default_format", "yaml")
+        return self.get("default_format", "xml")
 
     def get_api_key(self, provider: str) -> Optional[str]:
         """Get API key for a specific provider."""
@@ -161,3 +163,35 @@ class Config:
         """Get a specific custom provider configuration."""
         custom_providers = self.get_custom_providers()
         return custom_providers.get(name)
+        
+    def get_commands_enabled(self) -> bool:
+        """Get whether command execution is enabled by default."""
+        return self.get("commands_enabled", True)
+        
+    def set_commands_enabled(self, enabled: bool) -> bool:
+        """Set whether command execution is enabled by default."""
+        return self.set("commands_enabled", enabled)
+        
+    def get_disabled_commands(self) -> list:
+        """Get the list of disabled commands."""
+        return self.get("disabled_commands", [])
+        
+    def set_disabled_commands(self, commands: list) -> bool:
+        """Set the list of disabled commands."""
+        return self.set("disabled_commands", commands)
+        
+    def add_disabled_command(self, command: str) -> bool:
+        """Add a command to the disabled list."""
+        disabled = self.get_disabled_commands()
+        if command not in disabled:
+            disabled.append(command)
+            return self.set_disabled_commands(disabled)
+        return True
+        
+    def remove_disabled_command(self, command: str) -> bool:
+        """Remove a command from the disabled list."""
+        disabled = self.get_disabled_commands()
+        if command in disabled:
+            disabled.remove(command)
+            return self.set_disabled_commands(disabled)
+        return False
