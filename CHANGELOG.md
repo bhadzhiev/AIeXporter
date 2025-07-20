@@ -1,3 +1,9 @@
+## v0.13.0 (2025-07-20)
+
+### Feat
+
+- implement multi-language placeholder generators for dynamic template variables
+
 ## v0.12.0 (2025-07-20)
 
 ### Feat
