@@ -414,7 +414,7 @@ def run(
         None, "--temperature", help="Temperature for generation"
     ),
     execute: bool = typer.Option(
-        False, "--execute", "-e", help="Execute the prompt via API"
+        True, "--execute/--no-execute", "-e", help="Execute the prompt via API (enabled by default)"
     ),
     disable_commands: bool = typer.Option(
         False, "--disable-commands", help="Disable command execution in templates"
