@@ -1,3 +1,9 @@
+## v0.14.0 (2025-07-20)
+
+### Feat
+
+- refactor provider setup to interactive wizard with simplified UX
+
 ## v0.13.0 (2025-07-20)
 
 ### Feat
