@@ -1,3 +1,9 @@
+## v0.8.1 (2025-07-20)
+
+### Fix
+
+- improve command security pattern matching precision
+
 ## v0.8.0 (2025-07-20)
 
 ### BREAKING CHANGE
