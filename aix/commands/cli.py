@@ -3,7 +3,8 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 from typing import Optional
-from .command_executor import CommandExecutor
+from .executor import CommandExecutor
+from .security import DefaultSecurityValidator
 
 console = Console()
 
@@ -15,24 +16,25 @@ def test_cmd(
     ),
 ):
     """Test a command to see if it's allowed and get its output."""
-    from .config import Config
+    from ..config import Config
     config = Config()
     
     disabled_commands = config.get_disabled_commands()
-    executor = CommandExecutor(disabled_commands=disabled_commands or None)
+    security_validator = DefaultSecurityValidator(disabled_commands=disabled_commands or None)
+    executor = CommandExecutor(security_validator=security_validator, timeout=timeout)
 
     # Check if command is allowed
     if not executor.is_command_allowed(command):
         console.print(f"Command disabled for security: {command}", style="red")
         console.print("Disabled command patterns:", style="yellow")
-        for cmd in executor.disabled_commands:
+        for cmd in security_validator.disabled_commands:
             console.print(f"  - {cmd}", style="dim")
         return
 
     console.print(f"Testing command: [cyan]{command}[/cyan]")
 
     # Execute the command
-    success, stdout, stderr = executor.execute_command(command, timeout)
+    success, stdout, stderr = executor.execute(command)
 
     if success:
         console.print("Command executed successfully", style="green")
@@ -48,11 +50,11 @@ def test_cmd(
 
 def show_commands():
     """Show command execution status and disabled commands."""
-    from .config import Config
+    from ..config import Config
     config = Config()
     
     disabled_commands = config.get_disabled_commands()
-    executor = CommandExecutor(disabled_commands=disabled_commands or None)
+    security_validator = DefaultSecurityValidator(disabled_commands=disabled_commands or None)
     commands_enabled = config.get_commands_enabled()
 
     console.print("Command Execution Status", style="bold cyan")
@@ -75,11 +77,12 @@ def template_test(
     ),
 ):
     """Test a template with command execution."""
-    from .config import Config
+    from ..config import Config
     config = Config()
     
     disabled_commands = config.get_disabled_commands()
-    executor = CommandExecutor(disabled_commands=disabled_commands or None)
+    security_validator = DefaultSecurityValidator(disabled_commands=disabled_commands or None)
+    executor = CommandExecutor(security_validator=security_validator)
 
     # Parse variables
     variables = {}
@@ -93,27 +96,25 @@ def template_test(
     console.print("Template:")
     console.print(template)
 
-    # Extract commands first
-    commands = executor.extract_commands(template)
+    console.print("\n[dim]Note: Template processing functionality has been moved to the template module[/dim]")
+    console.print("Current template testing is limited to command validation.")
+    
+    # For now, just validate any commands in the template
+    import re
+    commands = re.findall(r'\$\([^)]+\)|\{cmd:[^}]+\}|\{exec:[^}]+\}', template)
     if commands:
         console.print("Found commands:", style="yellow")
-        for placeholder, command in commands:
-            console.print(f"  {placeholder} → {command}")
-
-    # Process template
-    try:
-        result, command_outputs = executor.process_template(template, variables)
-
-        if command_outputs:
-            console.print("\nCommand outputs:", style="blue")
-            for placeholder, output in command_outputs.items():
-                console.print(f"  {placeholder}")
-                console.print("Output:")
-                console.print(output)
-
-        console.print("\nFinal result:", style="green")
-        console.print("Processed Template:")
-        console.print(result)
-
-    except Exception as e:
-        console.print(f"Error processing template: {e}", style="red")
+        for cmd_placeholder in commands:
+            cmd = cmd_placeholder.strip('$(){}').replace('cmd:', '').replace('exec:', '')
+            if executor.is_command_allowed(cmd):
+                console.print(f"  {cmd_placeholder} → {cmd} [green]✓[/green]")
+            else:
+                console.print(f"  {cmd_placeholder} → {cmd} [red]✗[/red]")
+    
+    # Show template with variables substituted (basic)
+    result = template
+    for key, value in variables.items():
+        result = result.replace(f"{{{key}}}", value)
+    
+    console.print("\nTemplate with variables:")
+    console.print(result)

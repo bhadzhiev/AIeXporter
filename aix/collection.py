@@ -190,7 +190,49 @@ class CollectionStorage:
 
     def get_collection(self, name: str) -> Optional[Collection]:
         """Load a collection from XML format."""
-        return self.get_collection_from_xml(name)
+        # First try XML format
+        xml_collection = self.get_collection_from_xml(name)
+        if xml_collection:
+            # For backward compatibility, also check directory for additional templates
+            collection_dir = self.collections_path / name
+            if collection_dir.exists() and collection_dir.is_dir():
+                # Auto-discover templates in directory and validate against actual files
+                discovered_templates = []
+                for xml_file in collection_dir.glob("*.xml"):
+                    template_name = xml_file.stem
+                    discovered_templates.append(template_name)
+                
+                # Use discovered templates as the authoritative list for directory-based collections
+                # This ensures consistency with actual file system state
+                all_templates = discovered_templates
+                if all_templates != xml_collection.templates:
+                    xml_collection.templates = all_templates
+                    xml_collection.updated_at = __import__('datetime').datetime.now().isoformat()
+                    self.save_collection(xml_collection)
+            
+            return xml_collection
+            
+        # For backward compatibility, check for directory-based collection
+        collection_dir = self.collections_path / name
+        if collection_dir.exists() and collection_dir.is_dir():
+            # Auto-discover templates in directory
+            templates = []
+            for xml_file in collection_dir.glob("*.xml"):
+                templates.append(xml_file.stem)
+            
+            if templates:
+                # Create a collection with discovered templates
+                from datetime import datetime
+                collection = Collection(
+                    name=name,
+                    description="",
+                    templates=templates,
+                    created_at=datetime.now().isoformat(),
+                    updated_at=datetime.now().isoformat(),
+                )
+                return collection
+                
+        return None
 
     def get_collection_from_xml(self, name: str) -> Optional[Collection]:
         """Load a collection from an XML file."""
@@ -386,11 +428,20 @@ class CollectionStorage:
                 if template:
                     templates.append(template)
         else:
-            # Use directory-based approach
-            for template_name in collection.templates:
-                template = storage.get_prompt(template_name)
-                if template:
-                    templates.append(template)
+            # Use directory-based approach - scan collection directory for XML files
+            collection_dir = self.collections_path / collection_name
+            if collection_dir.exists() and collection_dir.is_dir():
+                for xml_file in collection_dir.glob("*.xml"):
+                    template_name = xml_file.stem
+                    template = storage.get_prompt(template_name, collection_name)
+                    if template:
+                        templates.append(template)
+            else:
+                # Fallback to templates list in collection
+                for template_name in collection.templates:
+                    template = storage.get_prompt(template_name)
+                    if template:
+                        templates.append(template)
 
         return templates
 
@@ -405,8 +456,27 @@ class CollectionStorage:
         valid = []
         missing = []
 
+        # For directory-based collections, auto-discover templates
+        xml_path = self.collections_path / f"{collection_name}.xml"
+        if not xml_path.exists():
+            collection_dir = self.collections_path / collection_name
+            if collection_dir.exists() and collection_dir.is_dir():
+                # Auto-discover templates in directory
+                discovered_templates = []
+                for xml_file in collection_dir.glob("*.xml"):
+                    template_name = xml_file.stem
+                    discovered_templates.append(template_name)
+                
+                # Update collection with discovered templates
+                if discovered_templates:
+                    collection.templates = discovered_templates
+                    collection.updated_at = __import__('datetime').datetime.now().isoformat()
+                    self.save_collection(collection)
+
         for template_name in collection.templates:
-            if storage.prompt_exists(template_name):
+            if storage.prompt_exists(template_name, collection_name):
+                valid.append(template_name)
+            elif storage.prompt_exists(template_name):
                 valid.append(template_name)
             else:
                 missing.append(template_name)
@@ -530,21 +600,68 @@ class CollectionManager:
         export_path: Path,
         include_templates: bool = True,
     ) -> bool:
-        """Export a collection as XML file."""
+        """Export a collection as a bundle (tar.gz with XML and templates)."""
+        import tarfile
+        import tempfile
+        import json
         import shutil
+        from datetime import datetime
 
         # Check if collection exists
-        xml_path = self.collection_storage.collections_path / f"{collection_name}.xml"
-        if not xml_path.exists():
+        collection = self.collection_storage.get_collection(collection_name)
+        if not collection:
             return False
 
         export_path = Path(export_path)
         export_path.mkdir(parents=True, exist_ok=True)
         
-        # Simply copy the XML file
-        dest_path = export_path / f"{collection_name}.xml"
+        # Create bundle file name
+        bundle_file = export_path / f"{collection_name}-bundle.tar.gz"
+        
         try:
-            shutil.copy2(xml_path, dest_path)
+            with tarfile.open(bundle_file, "w:gz") as tar:
+                # Add collection XML file
+                xml_path = self.collection_storage.collections_path / f"{collection_name}.xml"
+                if xml_path.exists():
+                    tar.add(xml_path, arcname=f"{collection_name}.xml")
+                
+                # Create manifest
+                manifest = {
+                    "collection_name": collection_name,
+                    "exported_at": datetime.now().isoformat(),
+                    "version": "1.0",
+                    "include_templates": include_templates,
+                    "templates": collection.templates,
+                }
+                
+                # Add manifest as JSON
+                with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+                    json.dump(manifest, f, indent=2)
+                    manifest_path = Path(f.name)
+                
+                tar.add(manifest_path, arcname="manifest.json")
+                manifest_path.unlink()
+                
+                # Include template files if requested
+                if include_templates:
+                    for template_name in collection.templates:
+                        template = self.prompt_storage.get_prompt(template_name)
+                        if template:
+                            # Add template metadata (YAML/JSON)
+                            metadata_path = self.prompt_storage.storage_path / f"{template_name}.yaml"
+                            if metadata_path.exists():
+                                tar.add(metadata_path, arcname=f"templates/{template_name}.yaml")
+                            else:
+                                # Try JSON format
+                                metadata_path = self.prompt_storage.storage_path / f"{template_name}.json"
+                                if metadata_path.exists():
+                                    tar.add(metadata_path, arcname=f"templates/{template_name}.json")
+                            
+                            # Add template content
+                            content_path = self.prompt_storage.storage_path / f"{template_name}.txt"
+                            if content_path.exists():
+                                tar.add(content_path, arcname=f"templates/{template_name}.txt")
+            
             return True
         except Exception as e:
             print(f"Error exporting collection: {e}")
@@ -553,7 +670,10 @@ class CollectionManager:
     def import_collection(
         self, import_path: Path, overwrite: bool = False
     ) -> Dict[str, Any]:
-        """Import a collection from an XML file."""
+        """Import a collection from a bundle file."""
+        import tarfile
+        import json
+        import tempfile
         import shutil
 
         import_path = Path(import_path)
@@ -566,8 +686,87 @@ class CollectionManager:
         }
 
         try:
-            if import_path.suffix == ".xml":
-                # Get collection name from filename
+            if import_path.suffix == ".gz" and import_path.name.endswith(".tar.gz"):
+                # Handle bundle import
+                with tarfile.open(import_path, "r:gz") as tar:
+                    # Extract to temporary directory
+                    with tempfile.TemporaryDirectory() as temp_dir:
+                        temp_path = Path(temp_dir)
+                        tar.extractall(temp_path, filter='data')  # Use filter for security
+                        
+                        # Read manifest
+                        manifest_path = temp_path / "manifest.json"
+                        if not manifest_path.exists():
+                            result["errors"].append("Invalid bundle: missing manifest")
+                            return result
+                        
+                        with open(manifest_path) as f:
+                            manifest = json.load(f)
+                        
+                        collection_name = manifest["collection_name"]
+                        result["collection_name"] = collection_name
+                        
+                        # Check if collection exists
+                        if self.collection_storage.collection_exists(collection_name) and not overwrite:
+                            result["errors"].append(
+                                f"Collection '{collection_name}' already exists (use --overwrite)"
+                            )
+                            return result
+                        
+                        # Import collection XML
+                        xml_path = temp_path / f"{collection_name}.xml"
+                        if xml_path.exists():
+                            dest_xml_path = self.collection_storage.collections_path / f"{collection_name}.xml"
+                            shutil.copy2(xml_path, dest_xml_path)
+                        
+                        # Import templates if they exist in bundle
+                        templates_dir = temp_path / "templates"
+                        if templates_dir.exists():
+                            for template_file in templates_dir.glob("*.yaml"):
+                                template_name = template_file.stem
+                                
+                                # Skip if template already exists and not overwriting
+                                if self.prompt_storage.prompt_exists(template_name) and not overwrite:
+                                    result["skipped_templates"].append(template_name)
+                                    continue
+                                
+                                # Import template metadata
+                                dest_metadata_path = self.prompt_storage.storage_path / f"{template_name}.yaml"
+                                shutil.copy2(template_file, dest_metadata_path)
+                                
+                                # Import template content
+                                content_file = templates_dir / f"{template_name}.txt"
+                                if content_file.exists():
+                                    dest_content_path = self.prompt_storage.storage_path / f"{template_name}.txt"
+                                    shutil.copy2(content_file, dest_content_path)
+                                
+                                result["imported_templates"].append(template_name)
+                            
+                            # Also check for JSON files
+                            for template_file in templates_dir.glob("*.json"):
+                                template_name = template_file.stem
+                                
+                                # Skip if template already exists and not overwriting
+                                if self.prompt_storage.prompt_exists(template_name) and not overwrite:
+                                    result["skipped_templates"].append(template_name)
+                                    continue
+                                
+                                # Import template metadata
+                                dest_metadata_path = self.prompt_storage.storage_path / f"{template_name}.json"
+                                shutil.copy2(template_file, dest_metadata_path)
+                                
+                                # Import template content
+                                content_file = templates_dir / f"{template_name}.txt"
+                                if content_file.exists():
+                                    dest_content_path = self.prompt_storage.storage_path / f"{template_name}.txt"
+                                    shutil.copy2(content_file, dest_content_path)
+                                
+                                result["imported_templates"].append(template_name)
+                        
+                        result["success"] = True
+                        
+            elif import_path.suffix == ".xml":
+                # Handle legacy XML import
                 collection_name = import_path.stem
                 result["collection_name"] = collection_name
 
@@ -590,7 +789,7 @@ class CollectionManager:
                 else:
                     result["errors"].append("Failed to load imported collection")
             else:
-                result["errors"].append("Only XML files are supported for import")
+                result["errors"].append("Only .tar.gz bundles and .xml files are supported for import")
 
         except Exception as e:
             result["errors"].append(f"Import failed: {e}")

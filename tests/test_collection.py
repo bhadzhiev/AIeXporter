@@ -125,7 +125,7 @@ class TestCollectionStorage:
         prompt_storage = PromptStorage(temp_storage_dir)
 
         # Create a collection
-        collection = Collection(name="template-collection", templates=[])
+        collection = Collection(name="template-collection", templates=["test-template"])
         success = collection_storage.save_collection(collection)
         assert success is True
 

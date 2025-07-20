@@ -4,7 +4,7 @@ import xml.etree.ElementTree as ET
 from typing import List, Dict, Optional, Tuple
 from dataclasses import dataclass, asdict
 from datetime import datetime
-from .command_executor import CommandExecutor
+from .commands.executor import CommandExecutor
 
 
 @dataclass

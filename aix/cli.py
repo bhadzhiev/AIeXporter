@@ -13,9 +13,10 @@ from .template import PromptTemplate, TemplateSafeEncoder
 from .config import Config
 from .api_client import get_client
 from .api_keys import setup_api_key
-from .command_executor import CommandExecutor
+from .commands.executor import CommandExecutor
+from .commands.security import DefaultSecurityValidator
 from .collection import CollectionManager
-from . import commands
+from .commands import test_cmd, show_commands, template_test
 from . import __version__
 from .completion import (
     complete_prompt_names,
@@ -513,7 +514,8 @@ def run(
     if commands_enabled:
         # Execute commands in the template (enabled by default)
         disabled_commands = config.get_disabled_commands()
-        executor = CommandExecutor(disabled_commands=disabled_commands or None)
+        security_validator = DefaultSecurityValidator(disabled_commands=disabled_commands or None)
+        executor = CommandExecutor(security_validator=security_validator)
         generated_prompt, command_outputs = prompt.render(
             param_dict, execute_commands=True, command_executor=executor, execute_generators=True
         )
@@ -858,9 +860,9 @@ def safe_template(
 
 # Add command testing subcommands
 cmd_app = typer.Typer(name="cmd", help="Command execution utilities")
-cmd_app.command("test")(commands.test_cmd)
-cmd_app.command("list")(commands.show_commands)
-cmd_app.command("template-test")(commands.template_test)
+cmd_app.command("test")(test_cmd)
+cmd_app.command("list")(show_commands)
+cmd_app.command("template-test")(template_test)
 app.add_typer(cmd_app, name="cmd")
 
 
@@ -1355,6 +1357,9 @@ provider_app = typer.Typer(name="provider", help="Manage custom API providers")
 def provider_add(
     name: Optional[str] = typer.Argument(None, help="Provider name (optional - will prompt if not provided)"),
     base_url: Optional[str] = typer.Argument(None, help="Base URL for the API (optional - will prompt if not provided)"),
+    model: Optional[str] = typer.Option(None, "--model", "-m", help="Default model for this provider"),
+    header: Optional[List[str]] = typer.Option(None, "--header", "-h", help="Custom headers (format: 'Header:Value')"),
+    auth_type: Optional[str] = typer.Option("bearer", "--auth-type", help="Authentication type (bearer, api-key, none)"),
     quick: bool = typer.Option(False, "--quick", "-q", help="Skip wizard and use minimal setup"),
 ):
     """Add a custom API provider with guided setup."""
@@ -1363,9 +1368,25 @@ def provider_add(
     try:
         config = Config()
         
-        # Quick mode for users who want the old behavior
-        if quick and name and base_url:
-            success = config.add_custom_provider(name=name, base_url=base_url)
+        # Quick mode when both name and base_url are provided
+        if name and base_url:
+            # Parse headers
+            headers_dict = {}
+            if header:
+                for h in header:
+                    if ":" not in h:
+                        console.print(f"Invalid header format: {h}. Use key:value format", style="red")
+                        return
+                    key, value = h.split(":", 1)
+                    headers_dict[key.strip()] = value.strip()
+            
+            success = config.add_custom_provider(
+                name=name,
+                base_url=base_url,
+                default_model=model,
+                headers=headers_dict,
+                auth_type=auth_type
+            )
             if success:
                 console.print(f"Custom provider '{name}' added successfully!", style="green")
                 console.print(f"Use with: aix run <prompt> --provider custom:{name}", style="cyan")
@@ -1525,11 +1546,12 @@ def provider_list():
             console.print("Add one with: aix provider add <name> <base-url>", style="cyan")
             return
         
-        console.print("Custom API Providers:", style="bold")
+        console.print("Custom Providers:", style="bold")
         for name, provider_data in providers.items():
             console.print(f"  {name}: {provider_data.get('base_url', 'N/A')}", style="green")
-            if provider_data.get("model"):
-                console.print(f"    Default model: {provider_data['model']}", style="dim")
+            if provider_data.get("default_model"):
+                console.print(f"    Default model: {provider_data['default_model']}", style="dim")
+            console.print(f"    Auth Type: {provider_data.get('auth_type', 'bearer')}", style="dim")
                 
     except Exception as e:
         console.print(f"Error listing providers: {e}", style="red")
@@ -1545,12 +1567,13 @@ def provider_info(name: str = typer.Argument(..., help="Provider name")):
         provider_data = config.get_custom_provider(name)
         
         if not provider_data:
-            console.print(f"Custom provider '{name}' not found.", style="red")
-            raise typer.Exit(1)
+            console.print(f"Custom provider '{name}' not found", style="red")
+            return
         
-        console.print(f"Provider: {name}", style="bold green")
+        console.print(f"Custom Provider: {name}", style="bold green")
         console.print(f"Base URL: {provider_data.get('base_url', 'N/A')}")
         console.print(f"Default Model: {provider_data.get('default_model', 'Not set')}")
+        console.print(f"Auth Type: {provider_data.get('auth_type', 'bearer')}")
         
         headers = provider_data.get('headers', {})
         if headers:
@@ -1579,8 +1602,8 @@ def provider_remove(name: str = typer.Argument(..., help="Provider name")):
         
         # Check if provider exists
         if not config.get_custom_provider(name):
-            console.print(f"Custom provider '{name}' not found.", style="red")
-            raise typer.Exit(1)
+            console.print(f"Custom provider '{name}' not found", style="red")
+            return
         
         success = config.remove_custom_provider(name)
         
@@ -1588,7 +1611,6 @@ def provider_remove(name: str = typer.Argument(..., help="Provider name")):
             console.print(f"Custom provider '{name}' removed successfully!", style="green")
         else:
             console.print(f"Failed to remove provider '{name}'", style="red")
-            raise typer.Exit(1)
             
     except Exception as e:
         console.print(f"Error removing provider: {e}", style="red")
