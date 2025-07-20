@@ -119,13 +119,19 @@ class PromptTemplate:
             for var in self.variables:
                 ET.SubElement(variables_elem, "variable").text = var
         
-        # Content section using CDATA
+        # Content section - will be replaced with CDATA manually
         content = ET.SubElement(root, "content")
-        content.text = self.template
+        content.text = "PLACEHOLDER_FOR_CDATA"
         
-        # Format and return XML string with pretty printing
+        # Format XML string with pretty printing
         ET.indent(root, space="  ", level=0)
-        return '<?xml version="1.0" encoding="utf-8"?>\n' + ET.tostring(root, encoding='unicode')
+        xml_string = '<?xml version="1.0" encoding="utf-8"?>\n' + ET.tostring(root, encoding='unicode')
+        
+        # Replace placeholder with CDATA section
+        cdata_content = f"<![CDATA[{self.template}]]>"
+        xml_string = xml_string.replace("PLACEHOLDER_FOR_CDATA", cdata_content)
+        
+        return xml_string
 
     @classmethod
     def from_xml(cls, xml_content: str) -> "PromptTemplate":
@@ -166,9 +172,25 @@ class PromptTemplate:
                     if var_elem.text:
                         variables.append(var_elem.text)
             
-            # Extract content
+            # Extract content (handle both CDATA and regular text)
             content_elem = root.find("content")
-            template = content_elem.text if content_elem is not None else ""
+            if content_elem is not None:
+                # Handle CDATA content
+                if content_elem.text and content_elem.text.strip():
+                    template = content_elem.text
+                else:
+                    # If no text, check for CDATA in the original XML
+                    # This handles cases where CDATA might not be parsed as text
+                    template = ""
+                    # Find the content section in the raw XML
+                    import re
+                    content_match = re.search(r'<content><!\[CDATA\[(.*?)\]\]></content>', xml_content, re.DOTALL)
+                    if content_match:
+                        template = content_match.group(1)
+                    elif content_elem.text:
+                        template = content_elem.text
+            else:
+                template = ""
             
             return cls(
                 name=name,
