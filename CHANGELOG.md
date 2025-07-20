@@ -1,3 +1,9 @@
+## v0.9.1 (2025-07-20)
+
+### Fix
+
+- correct typo in CHANGELOG.md (Commands → Command)
+
 ## v0.9.0 (2025-07-20)
 
 ### Feat
