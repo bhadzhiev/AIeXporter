@@ -431,7 +431,14 @@ def run(
     # Check if a collection is loaded and if the prompt is in it
     current_collection = manager.collection_storage.get_current_collection()
 
-    prompt = storage.get_prompt(name)
+    # Try to get prompt from current collection first if one is loaded
+    prompt = None
+    if current_collection:
+        prompt = manager.collection_storage.get_xml_collection_template(current_collection, name)
+    
+    # Fall back to regular storage if not found in collection
+    if not prompt:
+        prompt = storage.get_prompt(name)
 
     if not prompt:
         console.print(f"Prompt '{name}' not found", style="red")
