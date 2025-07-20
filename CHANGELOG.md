@@ -1,3 +1,9 @@
+## v0.15.0 (2025-07-20)
+
+### Feat
+
+- add enhanced version synchronization with automatic cleanup
+
 ## v0.14.0 (2025-07-20)
 
 ### Feat

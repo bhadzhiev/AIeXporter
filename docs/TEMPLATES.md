@@ -6,6 +6,7 @@ aix templates are like Mad Libs for AI. Fill in the blanks and watch the magic h
 
 ### Basic Variables
 
+
 ```yaml
 # prompt.yaml
 template: "Write a {genre} story about {character} who {action}"
@@ -153,7 +154,7 @@ Templates are stored as XML files in `~/.prompts/`:
 Templates can include placeholder generators that execute scripts to provide real-time values:
 
 ### Python Generators
-```xml
+```xmltest 
 <template>
   <metadata>
     <name>project-analysis</name>
