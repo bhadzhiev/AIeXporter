@@ -10,7 +10,7 @@
 
 - Commands are now enabled by default, --enable-commands replaced with --disable-commands
 
-### Feat
+### Feat 
 
 - enable command execution by default with security restrictions
 
