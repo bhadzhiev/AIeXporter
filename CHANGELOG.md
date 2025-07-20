@@ -1,3 +1,9 @@
+## v0.9.0 (2025-07-20)
+
+### Feat
+
+- implement CDATA for XML template content and fix character escaping
+
 ## v0.8.1 (2025-07-20)
 
 ### Fix
