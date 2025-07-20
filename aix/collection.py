@@ -3,6 +3,7 @@
 import json
 import yaml
 import os
+import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import List, Optional, Dict, Any
 from dataclasses import dataclass, asdict
@@ -17,6 +18,7 @@ class Collection:
     name: str
     description: str = ""
     templates: List[str] = None  # List of template names
+    system_prompt: Optional[str] = None  # JSON string for system prompt
     tags: List[str] = None
     author: str = ""
     created_at: str = ""
@@ -86,9 +88,12 @@ class CollectionStorage:
         extension = "yaml" if format == "yaml" else "json"
         return self._get_collection_dir_path(name) / f".collection.{extension}"
 
-    def save_collection(self, collection: Collection, format: str = "yaml") -> bool:
-        """Save a collection to directory format (default)."""
-        return self.save_collection_to_directory(collection, format)
+    def save_collection(self, collection: Collection, format: str = "xml") -> bool:
+        """Save a collection to XML format (default) or directory format."""
+        if format == "xml":
+            return self.save_collection_to_xml(collection)
+        else:
+            return self.save_collection_to_directory(collection, format)
 
     def save_collection_to_directory(self, collection: Collection, format: str = "yaml") -> bool:
         """Save a collection to its own directory with metadata file."""
@@ -115,9 +120,152 @@ class CollectionStorage:
             print(f"Error saving collection to directory: {e}")
             return False
 
+    def save_collection_to_xml(self, collection: Collection) -> bool:
+        """Save a collection to a single XML file with embedded templates."""
+        try:
+            xml_path = self.collections_path / f"{collection.name}.xml"
+            
+            # Create root element
+            root = ET.Element("collection")
+            
+            # Add metadata
+            metadata = ET.SubElement(root, "metadata")
+            ET.SubElement(metadata, "name").text = collection.name
+            ET.SubElement(metadata, "description").text = collection.description or ""
+            
+            if collection.system_prompt:
+                ET.SubElement(metadata, "system_prompt").text = collection.system_prompt
+            
+            # Add tags
+            if collection.tags:
+                tags_elem = ET.SubElement(metadata, "tags")
+                for tag in collection.tags:
+                    ET.SubElement(tags_elem, "tag").text = tag
+            
+            ET.SubElement(metadata, "author").text = collection.author or ""
+            ET.SubElement(metadata, "created_at").text = collection.created_at
+            ET.SubElement(metadata, "updated_at").text = collection.updated_at
+            
+            # Add templates section
+            templates_elem = ET.SubElement(root, "templates")
+            
+            # Load and embed each template
+            for template_name in collection.templates:
+                template = self._load_template_for_collection(template_name)
+                if template:
+                    template_elem = ET.SubElement(templates_elem, "template")
+                    
+                    # Template metadata
+                    tmpl_metadata = ET.SubElement(template_elem, "metadata")
+                    ET.SubElement(tmpl_metadata, "name").text = template.name
+                    ET.SubElement(tmpl_metadata, "description").text = template.description or ""
+                    ET.SubElement(tmpl_metadata, "created_at").text = template.created_at
+                    ET.SubElement(tmpl_metadata, "updated_at").text = template.updated_at
+                    
+                    # Template content with CDATA
+                    content_elem = ET.SubElement(template_elem, "content")
+                    content_elem.text = "PLACEHOLDER_FOR_CDATA"
+            
+            # Convert to string and replace placeholders with CDATA
+            xml_string = ET.tostring(root, encoding="unicode")
+            
+            # Add XML declaration
+            xml_string = '<?xml version="1.0" encoding="utf-8"?>\n' + xml_string
+            
+            # Replace content placeholders with CDATA
+            template_idx = 0
+            for template_name in collection.templates:
+                template = self._load_template_for_collection(template_name)
+                if template:
+                    cdata_content = f"<![CDATA[{template.template}]]>"
+                    xml_string = xml_string.replace("PLACEHOLDER_FOR_CDATA", cdata_content, 1)
+                    template_idx += 1
+            
+            # Write to file
+            with open(xml_path, "w", encoding="utf-8") as f:
+                f.write(xml_string)
+            
+            return True
+        except Exception as e:
+            print(f"Error saving collection to XML: {e}")
+            return False
+
+    def _load_template_for_collection(self, template_name: str) -> Optional[PromptTemplate]:
+        """Load a template from storage for embedding in collection."""
+        # First try to load from prompt storage
+        storage = PromptStorage(self.storage_path)
+        template = storage.get_prompt(template_name)
+        if template:
+            return template
+        
+        # If not found, try to load from any collection directory
+        for collection_dir in self.collections_path.glob("*"):
+            if collection_dir.is_dir():
+                template_path = collection_dir / f"{template_name}.xml"
+                if template_path.exists():
+                    return storage.get_prompt(template_name, collection_dir.name)
+        
+        return None
+
     def get_collection(self, name: str) -> Optional[Collection]:
-        """Load a collection from directory format."""
+        """Load a collection from XML format (preferred) or directory format."""
+        # First try XML format
+        xml_collection = self.get_collection_from_xml(name)
+        if xml_collection:
+            return xml_collection
+        
+        # Fall back to directory format
         return self.get_collection_from_directory(name)
+
+    def get_collection_from_xml(self, name: str) -> Optional[Collection]:
+        """Load a collection from an XML file."""
+        xml_path = self.collections_path / f"{name}.xml"
+        if not xml_path.exists():
+            return None
+        
+        try:
+            tree = ET.parse(xml_path)
+            root = tree.getroot()
+            
+            if root.tag != "collection":
+                return None
+            
+            # Parse metadata
+            metadata = root.find("metadata")
+            if metadata is None:
+                return None
+            
+            collection_data = {
+                "name": metadata.findtext("name", name),
+                "description": metadata.findtext("description", ""),
+                "system_prompt": metadata.findtext("system_prompt"),
+                "author": metadata.findtext("author", ""),
+                "created_at": metadata.findtext("created_at", ""),
+                "updated_at": metadata.findtext("updated_at", ""),
+                "tags": [],
+                "templates": []
+            }
+            
+            # Parse tags
+            tags_elem = metadata.find("tags")
+            if tags_elem is not None:
+                collection_data["tags"] = [tag.text for tag in tags_elem.findall("tag") if tag.text]
+            
+            # Parse template names from embedded templates
+            templates_elem = root.find("templates")
+            if templates_elem is not None:
+                for template_elem in templates_elem.findall("template"):
+                    template_metadata = template_elem.find("metadata")
+                    if template_metadata is not None:
+                        template_name = template_metadata.findtext("name")
+                        if template_name:
+                            collection_data["templates"].append(template_name)
+            
+            return Collection.from_dict(collection_data)
+            
+        except Exception as e:
+            print(f"Error loading collection from XML {xml_path}: {e}")
+            return None
 
     def get_collection_from_directory(self, name: str) -> Optional[Collection]:
         """Load a collection from its directory."""
@@ -153,11 +301,22 @@ class CollectionStorage:
         return None
 
     def list_collections(self) -> List[Collection]:
-        """List all available collections from directory format."""
+        """List all available collections from XML and directory formats."""
         collections = []
         seen_names = set()
 
-        # Scan for directory-based collections
+        # Scan for XML-based collections first (preferred format)
+        for xml_path in self.collections_path.glob("*.xml"):
+            name = xml_path.stem
+            if name in seen_names:
+                continue
+            seen_names.add(name)
+
+            collection = self.get_collection_from_xml(name)
+            if collection:
+                collections.append(collection)
+
+        # Scan for directory-based collections (legacy format)
         for dir_path in self.collections_path.glob("*"):
             if dir_path.is_dir():
                 name = dir_path.name
@@ -172,23 +331,44 @@ class CollectionStorage:
         return sorted(collections, key=lambda c: c.name)
 
     def delete_collection(self, name: str) -> bool:
-        """Delete a collection directory from storage."""
+        """Delete a collection from storage (XML or directory format)."""
         import shutil
+        deleted = False
         
+        # Try to delete XML collection
+        xml_path = self.collections_path / f"{name}.xml"
+        if xml_path.exists():
+            try:
+                xml_path.unlink()
+                deleted = True
+            except Exception as e:
+                print(f"Error deleting XML collection {xml_path}: {e}")
+        
+        # Try to delete directory collection
         collection_dir = self._get_collection_dir_path(name)
         if collection_dir.exists():
             try:
                 shutil.rmtree(collection_dir)
-                # Clear current collection if it was the deleted one
-                if self.get_current_collection() == name:
-                    self.clear_current_collection()
-                return True
+                deleted = True
             except Exception as e:
                 print(f"Error deleting collection directory {collection_dir}: {e}")
+        
+        if deleted:
+            # Clear current collection if it was the deleted one
+            if self.get_current_collection() == name:
+                self.clear_current_collection()
+            return True
+        
         return False
 
     def collection_exists(self, name: str) -> bool:
-        """Check if a collection directory exists."""
+        """Check if a collection exists (XML or directory format)."""
+        # Check for XML collection
+        xml_path = self.collections_path / f"{name}.xml"
+        if xml_path.exists():
+            return True
+        
+        # Check for directory collection
         collection_dir = self._get_collection_dir_path(name)
         return collection_dir.exists() and collection_dir.is_dir()
 
@@ -229,6 +409,46 @@ class CollectionStorage:
             print(f"Error clearing current collection: {e}")
             return False
 
+    def get_xml_collection_template(self, collection_name: str, template_name: str) -> Optional[PromptTemplate]:
+        """Get a specific template from an XML collection."""
+        xml_path = self.collections_path / f"{collection_name}.xml"
+        if not xml_path.exists():
+            return None
+        
+        try:
+            tree = ET.parse(xml_path)
+            root = tree.getroot()
+            
+            # Find the template in the XML
+            templates_elem = root.find("templates")
+            if templates_elem is not None:
+                for template_elem in templates_elem.findall("template"):
+                    template_metadata = template_elem.find("metadata")
+                    if template_metadata is not None:
+                        name = template_metadata.findtext("name")
+                        if name == template_name:
+                            # Parse template data
+                            template_data = {
+                                "name": name,
+                                "description": template_metadata.findtext("description", ""),
+                                "created_at": template_metadata.findtext("created_at", ""),
+                                "updated_at": template_metadata.findtext("updated_at", ""),
+                                "template": ""
+                            }
+                            
+                            # Get content (handle CDATA)
+                            content_elem = template_elem.find("content")
+                            if content_elem is not None and content_elem.text:
+                                template_data["template"] = content_elem.text
+                            
+                            return PromptTemplate.from_dict(template_data)
+            
+            return None
+            
+        except Exception as e:
+            print(f"Error loading template {template_name} from XML collection {collection_name}: {e}")
+            return None
+
     def get_collection_templates(
         self, collection_name: str, storage: PromptStorage
     ) -> List[PromptTemplate]:
@@ -238,10 +458,21 @@ class CollectionStorage:
             return []
 
         templates = []
-        for template_name in collection.templates:
-            template = storage.get_prompt(template_name)
-            if template:
-                templates.append(template)
+        
+        # Check if this is an XML collection first
+        xml_path = self.collections_path / f"{collection_name}.xml"
+        if xml_path.exists():
+            # Load templates directly from XML
+            for template_name in collection.templates:
+                template = self.get_xml_collection_template(collection_name, template_name)
+                if template:
+                    templates.append(template)
+        else:
+            # Use directory-based approach
+            for template_name in collection.templates:
+                template = storage.get_prompt(template_name)
+                if template:
+                    templates.append(template)
 
         return templates
 
@@ -279,6 +510,7 @@ class CollectionManager:
         description: str = "",
         templates: List[str] = None,
         tags: List[str] = None,
+        system_prompt: str = None,
     ) -> bool:
         """Create a new collection."""
         if self.collection_storage.collection_exists(name):
@@ -290,12 +522,13 @@ class CollectionManager:
             name=name,
             description=description,
             templates=templates or [],
+            system_prompt=system_prompt,
             tags=tags or [],
             created_at=datetime.now().isoformat(),
             updated_at=datetime.now().isoformat(),
         )
 
-        return self.collection_storage.save_collection_to_directory(collection)
+        return self.collection_storage.save_collection(collection, "xml")
 
     def load_collection(self, name: str) -> bool:
         """Load a collection as the current working collection."""
@@ -351,7 +584,7 @@ class CollectionManager:
             from datetime import datetime
 
             collection.updated_at = datetime.now().isoformat()
-            return self.collection_storage.save_collection_to_directory(collection)
+            return self.collection_storage.save_collection(collection)
 
         return False
 
@@ -369,7 +602,7 @@ class CollectionManager:
             from datetime import datetime
 
             collection.updated_at = datetime.now().isoformat()
-            return self.collection_storage.save_collection_to_directory(collection)
+            return self.collection_storage.save_collection(collection)
 
         return False
 
@@ -840,3 +1073,68 @@ class CollectionManager:
         except Exception as e:
             print(f"Error migrating collection '{collection_name}' templates: {e}")
             return False
+
+    def migrate_directory_to_xml_collection(self, collection_name: str) -> bool:
+        """Migrate a directory-based collection to XML format."""
+        try:
+            print(f"🔄 Migrating collection '{collection_name}' from directory to XML format...")
+            
+            # Load the directory collection
+            collection = self.collection_storage.get_collection_from_directory(collection_name)
+            if not collection:
+                print(f"Directory collection '{collection_name}' not found")
+                return False
+            
+            # Check if XML already exists
+            xml_path = self.collection_storage.collections_path / f"{collection_name}.xml"
+            if xml_path.exists():
+                print(f"XML collection '{collection_name}' already exists, skipping migration")
+                return True
+            
+            # Save as XML collection
+            success = self.collection_storage.save_collection_to_xml(collection)
+            if not success:
+                print(f"Failed to save collection '{collection_name}' as XML")
+                return False
+            
+            print(f"✅ Successfully migrated collection '{collection_name}' to XML format")
+            
+            # Optionally remove the directory (commented out for safety)
+            # collection_dir = self.collection_storage._get_collection_dir_path(collection_name)
+            # if collection_dir.exists():
+            #     import shutil
+            #     shutil.rmtree(collection_dir)
+            #     print(f"  Removed directory: {collection_dir}")
+            
+            return True
+            
+        except Exception as e:
+            print(f"Error migrating collection '{collection_name}' to XML: {e}")
+            return False
+
+    def migrate_all_collections_to_xml(self) -> bool:
+        """Migrate all directory-based collections to XML format."""
+        print("🚀 Starting migration of all collections to XML format...")
+        
+        # Find all directory collections
+        directory_collections = []
+        for dir_path in self.collection_storage.collections_path.glob("*"):
+            if dir_path.is_dir():
+                collection = self.collection_storage.get_collection_from_directory(dir_path.name)
+                if collection:
+                    directory_collections.append(collection.name)
+        
+        if not directory_collections:
+            print("No directory collections found to migrate")
+            return True
+        
+        success_count = 0
+        total_count = len(directory_collections)
+        
+        for collection_name in directory_collections:
+            if self.migrate_directory_to_xml_collection(collection_name):
+                success_count += 1
+            print()  # Add spacing
+        
+        print(f"XML migration complete: {success_count}/{total_count} collections migrated successfully")
+        return success_count == total_count

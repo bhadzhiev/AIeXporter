@@ -952,6 +952,9 @@ def collection_create(
         [], "--template", "-t", help="Template names to add to collection"
     ),
     tags: List[str] = typer.Option([], "--tag", help="Tags for the collection"),
+    system_prompt: str = typer.Option(
+        None, "--system-prompt", "-s", help="System prompt as JSON string (e.g., '{\"role\": \"system\", \"content\": \"You are...\"}')"
+    ),
 ):
     """Create a new template collection."""
     console = Console()
@@ -975,7 +978,7 @@ def collection_create(
         console.print(f"Collection '{name}' already exists", style="red")
         return
 
-    success = manager.create_collection(name, description, templates, tags)
+    success = manager.create_collection(name, description, templates, tags, system_prompt)
     if success:
         console.print(
             f"Created collection '{name}' with {len(templates)} templates",
@@ -1188,6 +1191,8 @@ def collection_info(
     info_text = f"[bold cyan]{collection.name}[/bold cyan]\n"
     if collection.description:
         info_text += f"Description: {collection.description}\n"
+    if collection.system_prompt:
+        info_text += f"System Prompt: {collection.system_prompt}\n"
     if collection.tags:
         info_text += f"Tags: {', '.join(collection.tags)}\n"
     if collection.author:
@@ -1424,6 +1429,37 @@ def collection_xml_migrate(
                 
     except Exception as e:
         console.print(f"XML migration failed: {e}", style="red")
+
+
+@app.command("collection-to-xml")
+def collection_to_xml(
+    collection_name: str = typer.Argument(None, help="Collection name to migrate to XML (optional - migrates all if not specified)"),
+):
+    """Migrate directory-based collections to single XML file format."""
+    try:
+        manager = CollectionManager()
+        
+        if collection_name:
+            # Migrate specific collection
+            console.print(f"Converting '{collection_name}' collection to XML format...", style="blue")
+            success = manager.migrate_directory_to_xml_collection(collection_name)
+            
+            if success:
+                console.print(f"✅ Successfully converted '{collection_name}' collection to XML", style="green")
+            else:
+                console.print(f"❌ Failed to convert '{collection_name}' collection", style="red")
+        else:
+            # Migrate all collections
+            console.print("Converting all directory collections to XML format...", style="blue")
+            success = manager.migrate_all_collections_to_xml()
+            
+            if success:
+                console.print("✅ All collections converted to XML successfully", style="green")
+            else:
+                console.print("⚠️ Some collections failed to convert", style="yellow")
+                
+    except Exception as e:
+        console.print(f"Collection XML migration failed: {e}", style="red")
 
 
 # Provider management commands
