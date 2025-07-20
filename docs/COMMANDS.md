@@ -94,6 +94,110 @@ aix upgrade
 aix run prompt --auto-upgrade --execute
 ```
 
+### `aix safe-template` - Template Encoding
+```bash
+# Encode complex template for CLI safety
+aix safe-template "Template with {vars} and $(commands)"
+
+# Use encoded output in create command
+aix create my-prompt "$(aix safe-template 'Complex {template}')"
+```
+
+## Collection Commands
+
+### `aix collection-create` - Create Collections
+```bash
+# Create empty collection
+aix collection-create web-dev --description "Web development prompts"
+
+# Create with templates
+aix collection-create devops --template deploy --template monitor
+```
+
+### `aix collection-load` - Load Collections
+```bash
+# Load collection as current working set
+aix collection-load web-dev
+
+# Check current collection
+aix collection-info
+```
+
+### `aix collection-add` - Add Templates to Collection
+```bash
+# Add template to current collection
+aix collection-add new-template
+
+# Must have a collection loaded first
+aix collection-load web-dev
+aix collection-add code-review
+```
+
+### `aix collection-export` - Export Collections
+```bash
+# Export to bundle
+aix collection-export web-dev -o ~/backups/
+
+# Export as JSON
+aix collection-export web-dev -f json -o ~/exports/
+```
+
+### `aix collection-import` - Import Collections
+```bash
+# Import collection bundle
+aix collection-import ~/backups/web-dev-bundle.tar.gz
+
+# Overwrite existing
+aix collection-import ~/backups/web-dev-bundle.tar.gz --overwrite
+```
+
+### Collection Management Commands
+```bash
+# List all collections
+aix collection-list
+
+# Show collection info
+aix collection-info [collection-name]
+
+# Remove template from collection
+aix collection-remove template-name
+
+# Delete entire collection
+aix collection-delete collection-name --force
+
+# Unload current collection
+aix collection-unload
+
+# Migration commands
+aix collection-to-xml [collection-name]
+aix collection-migrate [collection-name]
+```
+
+## Provider Commands
+
+### `aix provider` - Custom Provider Management
+```bash
+# Add custom provider
+aix provider add ollama "http://localhost:11434/v1" --model "llama3.2"
+
+# Add with authentication headers
+aix provider add my-api "https://api.example.com/v1" \
+  --model "custom-model" \
+  --header "X-API-Key:secret"
+
+# List custom providers
+aix provider list
+
+# Get provider details
+aix provider info ollama
+
+# Remove provider
+aix provider remove ollama
+
+# Use custom provider
+aix run my-prompt --provider custom:ollama
+```
+
 ## Command Testing
 
 ### `aix cmd` - Command Utilities

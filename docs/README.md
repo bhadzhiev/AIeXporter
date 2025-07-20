@@ -12,6 +12,7 @@ Welcome to the complete documentation for **AI eXecutor (aix)** - the comprehens
 - **[Template Guide](TEMPLATES.md)** - Creating and managing prompt templates
 - **[Command Reference](COMMANDS.md)** - Complete CLI command reference
 - **[API Providers](API_PROVIDERS.md)** - Supported AI providers and configuration
+- **[Custom Providers](CUSTOM_PROVIDERS.md)** - Adding custom API providers and local models
 
 ### Developer Resources
 - **[OpenRouter Guide](OPENROUTER.md)** - OpenRouter-specific setup and usage

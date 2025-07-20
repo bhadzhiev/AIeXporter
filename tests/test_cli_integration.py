@@ -126,11 +126,9 @@ class TestCLIIntegration:
 
         assert result.returncode == 0
 
-        # Verify collection directory exists
-        collection_dir = temp_env["prompts_dir"] / "collections" / "test-collection"
-        metadata_file = collection_dir / ".collection.yaml"
-        assert collection_dir.exists() and collection_dir.is_dir()
-        assert metadata_file.exists()
+        # Verify collection XML file exists
+        xml_file = temp_env["prompts_dir"] / "collections" / "test-collection.xml"
+        assert xml_file.exists()
 
     def test_config_cli(self, temp_env):
         """Test configuration management via CLI."""
@@ -207,23 +205,23 @@ class TestCLIIntegration:
         assert result.returncode == 0
         assert "TestUser" in result.stdout
 
-    def test_yaml_and_json_formats(self, temp_env):
-        """Test creating prompts in both YAML and JSON formats."""
-        # Test YAML
+    def test_xml_format(self, temp_env):
+        """Test creating prompts in XML format."""
+        # Test XML template creation
         result = self.run_cli_command(
-            ["create", "yaml-test", "YAML template"], temp_env
+            ["create", "xml-test", "XML template"], temp_env
         )
 
         assert result.returncode == 0
-        assert (temp_env["prompts_dir"] / "yaml-test.xml").exists()
+        assert (temp_env["prompts_dir"] / "xml-test.xml").exists()
 
-        # Test JSON
+        # Test another template
         result = self.run_cli_command(
-            ["create", "json-test", "JSON template"], temp_env
+            ["create", "template-test", "Template content"], temp_env
         )
 
         assert result.returncode == 0
-        assert (temp_env["prompts_dir"] / "json-test.xml").exists()
+        assert (temp_env["prompts_dir"] / "template-test.xml").exists()
 
     def test_help_commands(self, temp_env):
         """Test help commands work correctly."""

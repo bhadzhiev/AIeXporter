@@ -1,6 +1,6 @@
 # API Providers
 
-PromptConsole supports multiple AI providers because variety is the spice of life (and sometimes OpenAI is down).
+aix supports multiple AI providers because variety is the spice of life (and sometimes OpenAI is down).
 
 ## Supported Providers
 
@@ -22,6 +22,14 @@ PromptConsole supports multiple AI providers because variety is the spice of lif
 - **Pros**: Great at following instructions
 - **Cons**: Can be expensive for heavy use
 
+### Custom Providers
+- **Model**: User-defined
+- **Cost**: Varies by provider
+- **Pros**: Use local models (Ollama), custom endpoints, specialized services
+- **Cons**: Requires manual setup
+
+See [CUSTOM_PROVIDERS.md](CUSTOM_PROVIDERS.md) for detailed setup instructions.
+
 ## Setting Up API Keys
 
 ### Interactive Setup
@@ -34,6 +42,9 @@ aix api-key openai
 
 # Set up Anthropic
 aix api-key anthropic
+
+# Set up custom provider
+aix api-key custom:provider-name
 ```
 
 ### Manual Setup

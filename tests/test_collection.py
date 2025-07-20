@@ -100,23 +100,20 @@ class TestCollectionStorage:
             tags=["test"],
         )
 
-        # Save collection (defaults to directory format)
+        # Save collection (XML format only)
         success = storage.save_collection(collection)
         assert success is True
 
-        # Verify directory and metadata file exist
-        collection_dir = temp_storage_dir / "collections" / "test-collection"
-        metadata_file = collection_dir / ".collection.yaml"
-        assert collection_dir.exists()
-        assert collection_dir.is_dir()
-        assert metadata_file.exists()
+        # Verify XML file exists
+        xml_file = temp_storage_dir / "collections" / "test-collection.xml"
+        assert xml_file.exists()
 
         # Retrieve collection
         retrieved = storage.get_collection("test-collection")
         assert retrieved is not None
         assert retrieved.name == collection.name
         assert retrieved.description == collection.description
-        # Templates list is built from directory scanning, so it starts empty
+        # Templates list is empty in new collection
         assert isinstance(retrieved.templates, list)
 
     def test_save_and_get_collection_with_templates(self, temp_storage_dir):
@@ -250,25 +247,20 @@ class TestCollectionStorage:
         prompt1 = PromptTemplate("valid1", "Template 1")
         prompt_storage.save_prompt_xml(prompt1, "mixed-collection")
 
-        # Manually add missing templates to the collection's template list
-        # (simulating what would happen if templates were deleted but collection metadata wasn't updated)
+        # In XML format, templates are embedded in the collection XML file
+        # So we modify the collection to add missing template references
         collection_loaded = collection_storage.get_collection("mixed-collection")
         collection_loaded.templates = ["valid1", "missing1", "missing2"]
-        
-        # For directory format, we save collection metadata with the templates list
-        import yaml
-        metadata_path = temp_storage_dir / "collections" / "mixed-collection" / ".collection.yaml"
-        with open(metadata_path, "w") as f:
-            yaml.dump(collection_loaded.to_dict(), f)
+        collection_storage.save_collection(collection_loaded)
 
-        # Validate - this will check if templates in metadata actually exist as files
+        # Validate - this will check if templates referenced in collection exist in storage
         validation = collection_storage.validate_collection_templates(
             "mixed-collection", prompt_storage
         )
 
-        # In directory format, only templates that exist as files are considered valid
+        # In XML format, templates are validated against the main storage
         assert "valid1" in validation["valid"] or len(validation["valid"]) >= 0
-        # Missing templates would be those listed in metadata but not found as files
+        # Missing templates would be those listed in collection but not found in storage
 
 
 class TestCollectionManager:

@@ -44,14 +44,21 @@ pre-commit run --all-files
 
 ### Running the Tool
 ```bash
-# Development mode via main.py
-python main.py --help
-
 # Via installed CLI (package name: aix)
 aix --help
 
+# Development mode via main.py
+python main.py --help
+
 # Direct module execution
 python -m aix.cli --help
+
+# Common usage patterns
+aix run my-prompt --param key=value           # Run with parameters
+aix run my-prompt --dry-run                   # Preview without execution
+aix run my-prompt --provider openai --model gpt-4  # Specify provider/model
+aix run my-prompt --disable-commands          # Disable command execution
+aix run my-prompt --output results.txt       # Save output to file
 ```
 
 ## Architecture
@@ -150,13 +157,49 @@ See [docs/CUSTOM_PROVIDERS.md](docs/CUSTOM_PROVIDERS.md) for detailed documentat
 The tool includes built-in command testing utilities:
 ```bash
 # Test command execution
-python main.py cmd test "git status"
+aix cmd test "git status"
 
-# List allowed commands
-python main.py cmd list
+# List allowed commands and security status
+aix cmd list
 
 # Test template with commands
-python main.py cmd template-test "Hello $(whoami)"
+aix cmd template-test "Hello $(whoami)"
+
+# Test with custom timeout
+aix cmd test "sleep 5" --timeout 10
+```
+
+## Utility Commands
+
+### Template Safe Encoding
+For complex templates with special characters, use safe encoding:
+```bash
+# Encode template with special characters for CLI safety
+aix safe-template "Complex template with {vars} and $(commands)"
+```
+
+### Self-Upgrade
+Keep aix updated with the built-in upgrade command:
+```bash
+# Upgrade to latest version from GitHub
+aix upgrade
+
+# Run with auto-upgrade (checks before execution)
+aix run my-prompt --auto-upgrade
+```
+
+### Collection Migration
+Migrate between collection formats:
+```bash
+# Migrate directory-based collections to XML format
+aix collection-to-xml [collection-name]
+
+# Migrate all collections to XML
+aix collection-to-xml
+
+# Legacy migration commands (for older formats)
+aix collection-migrate [collection-name]
+aix collection-xml-migrate [collection-name]
 ```
 
 ## Template Collections
@@ -191,6 +234,39 @@ aix collection-unload       # Return to working with all templates
 - `collection-remove <template>` - Remove template from current collection
 - `collection-info [name]` - Show detailed collection information
 - `collection-delete <name>` - Delete a collection
+- `collection-export <name>` - Export collection to portable bundle
+- `collection-import <path>` - Import collection from bundle
+
+### Collection Import/Export
+
+Collections can be exported as portable bundles and imported across different systems:
+
+```bash
+# Export a collection to a bundle
+aix collection-export web-dev -o ~/backup/
+
+# Import a collection bundle
+aix collection-import ~/backup/web-dev-bundle.tar.gz
+
+# Overwrite existing collection during import
+aix collection-import ~/backup/web-dev-bundle.tar.gz --overwrite
+
+# Export with specific format (yaml or json)
+aix collection-export web-dev -f json -o ~/exports/
+```
+
+**Export Features**:
+- **Complete Bundle**: Includes collection metadata and all template files
+- **Placeholder Generators**: Preserves multi-language placeholder generators
+- **Format Options**: Export as YAML (default) or JSON
+- **Template Validation**: Only exports existing templates, reports missing ones
+- **Manifest**: Includes export manifest with metadata and template inventory
+
+**Import Features**:
+- **Cross-Platform**: Bundles work across different systems
+- **Conflict Detection**: Prevents overwriting existing collections without explicit flag
+- **Template Recreation**: Recreates both XML and directory-based templates
+- **Generator Preservation**: Maintains placeholder generators and all metadata
 
 ### Collection Features
 - **Context-Aware Commands**: `list` and `run` commands are collection-aware
@@ -214,6 +290,55 @@ tags:
 created_at: 2025-07-19T13:29:41.700001
 updated_at: 2025-07-19T13:35:15.123456
 ```
+
+## Multi-Language Placeholder Generators
+
+Templates can include dynamic placeholder generators that execute scripts to provide real-time variable values:
+
+### Supported Languages
+- **Python**: Execute Python scripts for complex data processing
+- **Bash**: Execute shell commands for system information
+
+### Usage in Templates
+```xml
+<template>
+  <metadata>
+    <name>dynamic-analysis</name>
+    <placeholder_generators>
+      <placeholder_generator language="python"><![CDATA[
+import glob
+import os
+placeholders = {
+    "file_count": str(len(glob.glob("**/*.py", recursive=True))),
+    "project_name": os.getcwd().split("/")[-1],
+}
+      ]]></placeholder_generator>
+      <placeholder_generator language="bash"><![CDATA[
+echo "git_branch=$(git branch --show-current 2>/dev/null || echo 'no-git')"
+echo "git_status=$(git status --porcelain 2>/dev/null | wc -l)"
+      ]]></placeholder_generator>
+    </placeholder_generators>
+  </metadata>
+  <content><![CDATA[
+Analyze {project_name} project:
+- Files: {file_count}
+- Branch: {git_branch}
+- Changes: {git_status}
+  ]]></content>
+</template>
+```
+
+### Security Features
+- **Python Sandbox**: Restricted globals and imports for safe execution
+- **Bash Allowlist**: Only approved commands can be executed
+- **Timeout Protection**: 30-second execution limit
+- **Error Handling**: Graceful fallback when generators fail
+
+### Generator Benefits
+- **Real-time Data**: Automatically capture current system state
+- **Dynamic Analysis**: Generate project-specific information on demand
+- **Workflow Integration**: Seamlessly integrate with development tools
+- **Template Reusability**: Same template works across different projects
 
 ## Configuration Management
 

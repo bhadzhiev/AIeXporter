@@ -2,7 +2,7 @@
 
 ## Template Variables
 
-PromptConsole templates are like Mad Libs for AI. Fill in the blanks and watch the magic happen.
+aix templates are like Mad Libs for AI. Fill in the blanks and watch the magic happen.
 
 ### Basic Variables
 
@@ -124,20 +124,125 @@ variables:
 
 ## Template Storage
 
-Templates are stored as YAML files in `~/.prompts/`:
+Templates are stored as XML files in `~/.prompts/`:
 
-```yaml
-# ~/.prompts/my-prompt.yaml
-name: my-prompt
-template: "Your template here"
-variables:
-  - var1
-  - var2
-description: "Optional description"
-tags:
-  - productivity
-  - development
+```xml
+<!-- ~/.prompts/my-prompt.xml -->
+<?xml version="1.0" encoding="utf-8"?>
+<template>
+  <metadata>
+    <name>my-prompt</name>
+    <description>Optional description</description>
+    <variables>
+      <variable>var1</variable>
+      <variable>var2</variable>
+    </variables>
+    <tags>
+      <tag>productivity</tag>
+      <tag>development</tag>
+    </tags>
+    <created_at>2025-07-20T13:30:00.000000</created_at>
+    <updated_at>2025-07-20T13:30:00.000000</updated_at>
+  </metadata>
+  <content><![CDATA[Your template here with {var1} and {var2}]]></content>
+</template>
 ```
+
+## Dynamic Placeholder Generators
+
+Templates can include placeholder generators that execute scripts to provide real-time values:
+
+### Python Generators
+```xml
+<template>
+  <metadata>
+    <name>project-analysis</name>
+    <placeholder_generators>
+      <placeholder_generator language="python"><![CDATA[
+import glob
+import os
+placeholders = {
+    "file_count": str(len(glob.glob("**/*.py", recursive=True))),
+    "project_name": os.getcwd().split("/")[-1],
+    "large_files": str(len([f for f in glob.glob("**/*", recursive=True) 
+                           if os.path.isfile(f) and os.path.getsize(f) > 1000000]))
+}
+      ]]></placeholder_generator>
+    </placeholder_generators>
+  </metadata>
+  <content><![CDATA[
+Analyze {project_name}:
+- Python files: {file_count}
+- Large files (>1MB): {large_files}
+- Focus area: {focus_area}
+  ]]></content>
+</template>
+```
+
+### Bash Generators
+```xml
+<template>
+  <metadata>
+    <name>git-status-report</name>
+    <placeholder_generators>
+      <placeholder_generator language="bash"><![CDATA[
+echo "current_branch=$(git branch --show-current 2>/dev/null || echo 'no-git')"
+echo "uncommitted_changes=$(git status --porcelain 2>/dev/null | wc -l | tr -d ' ')"
+echo "last_commit=$(git log -1 --pretty='%h %s' 2>/dev/null || echo 'No commits')"
+echo "repo_status=$(git status --porcelain 2>/dev/null && echo 'Changes detected' || echo 'Clean')"
+      ]]></placeholder_generator>
+    </placeholder_generators>
+  </metadata>
+  <content><![CDATA[
+Git Status Report:
+- Branch: {current_branch}
+- Uncommitted: {uncommitted_changes} files
+- Last commit: {last_commit}
+- Status: {repo_status}
+- Manual input: {user_notes}
+  ]]></content>
+</template>
+```
+
+### Combined Generators
+```xml
+<template>
+  <metadata>
+    <name>comprehensive-report</name>
+    <placeholder_generators>
+      <placeholder_generator language="python"><![CDATA[
+import datetime
+import os
+placeholders = {
+    "timestamp": datetime.datetime.now().isoformat(),
+    "working_dir": os.getcwd(),
+    "python_version": f"{sys.version_info.major}.{sys.version_info.minor}"
+}
+      ]]></placeholder_generator>
+      <placeholder_generator language="bash"><![CDATA[
+echo "hostname=$(hostname)"
+echo "os_info=$(uname -s -r)"
+echo "disk_usage=$(df -h . | tail -1 | awk '{print $5}')"
+      ]]></placeholder_generator>
+    </placeholder_generators>
+  </metadata>
+  <content><![CDATA[
+System Report - {timestamp}
+- Host: {hostname}
+- OS: {os_info}
+- Working Dir: {working_dir}
+- Python: {python_version}
+- Disk Usage: {disk_usage}
+- Project: {project_name}
+  ]]></content>
+</template>
+```
+
+### Generator Security
+- **Python Sandbox**: Restricted imports and globals
+- **Bash Allowlist**: Only approved commands execute
+- **Timeout Protection**: 30-second execution limit
+- **Error Handling**: Graceful fallback on failure
 
 ## Template Examples
 

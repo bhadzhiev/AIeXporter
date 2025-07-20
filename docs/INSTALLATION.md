@@ -26,7 +26,7 @@ python main.py --help
 
 ## System Requirements
 
-- Python 3.8+ (we're not savages)
+- Python 3.12+ (required for modern features)
 - uv (recommended) or pip
 - Internet connection (for API calls)
 - A sense of humor (for error messages)

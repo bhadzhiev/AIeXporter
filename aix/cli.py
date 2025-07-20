@@ -308,12 +308,10 @@ def edit(
             created_at=prompt.created_at,
         )
 
-        # Determine format from existing file
-        format = "yaml"
-        for ext in ["yaml", "json"]:
-            if storage._get_prompt_path(name, ext).exists():
-                format = ext
-                break
+        # Determine format from existing file (JSON only)
+        format = "json"
+        if storage._get_prompt_path(name, "json").exists():
+            format = "json"
 
         success = storage.save_prompt(updated_prompt, format)
         if success:
@@ -1280,16 +1278,10 @@ def collection_delete(
 def collection_export(
     name: str = typer.Argument(..., help="Name of the collection to export"),
     output: Path = typer.Option(
-        ".", "--output", "-o", help="Output directory or file path"
-    ),
-    include_templates: bool = typer.Option(
-        True, "--templates/--no-templates", help="Include templates in export"
-    ),
-    format: str = typer.Option(
-        "yaml", "--format", "-f", help="Export format (yaml or json)"
+        ".", "--output", "-o", help="Output directory path"
     ),
 ):
-    """Export a collection to a file or bundle."""
+    """Export a collection as XML file."""
     console = Console()
     manager = CollectionManager()
 
@@ -1300,29 +1292,13 @@ def collection_export(
     output_path = Path(output)
 
     try:
-        success = manager.export_collection(
-            name, output_path, include_templates, format
-        )
+        success = manager.export_collection(name, output_path)
         if success:
-            if include_templates:
-                bundle_file = output_path / f"{name}-bundle.tar.gz"
-                console.print(
-                    f"Collection '{name}' exported as bundle to: {bundle_file}",
-                    style="green",
-                )
-                console.print(
-                    "Bundle includes collection metadata and all templates", style="dim"
-                )
-            else:
-                collection_file = output_path / f"{name}.{format}"
-                console.print(
-                    f"Collection '{name}' metadata exported to: {collection_file}",
-                    style="green",
-                )
-                console.print(
-                    "Note: Templates not included (use --templates to include)",
-                    style="yellow",
-                )
+            xml_file = output_path / f"{name}.xml"
+            console.print(
+                f"Collection '{name}' exported to: {xml_file}",
+                style="green",
+            )
         else:
             console.print(f"Failed to export collection '{name}'", style="red")
     except Exception as e:
@@ -1332,13 +1308,13 @@ def collection_export(
 @app.command("collection-import")
 def collection_import(
     path: Path = typer.Argument(
-        ..., help="Path to collection file or bundle to import"
+        ..., help="Path to collection XML file to import"
     ),
     overwrite: bool = typer.Option(
         False, "--overwrite", help="Overwrite existing collection and templates"
     ),
 ):
-    """Import a collection from a file or bundle."""
+    """Import a collection from an XML file."""
     console = Console()
     manager = CollectionManager()
 
@@ -1390,211 +1366,371 @@ def collection_import(
         console.print(f"Import failed: {e}", style="red")
 
 
-@app.command("collection-migrate")
-def collection_migrate(
-    collection_name: str = typer.Argument(None, help="Collection name to migrate (optional - migrates all if not specified)"),
-):
-    """Migrate collections to directory-based storage."""
-    try:
-        manager = CollectionManager()
-        
-        if collection_name:
-            # Migrate specific collection
-            console.print(f"Migrating collection '{collection_name}' to directory format...", style="blue")
-            success = manager.migrate_collection_to_directory(collection_name)
-            
-            if success:
-                console.print(f"✅ Successfully migrated collection '{collection_name}'", style="green")
-            else:
-                console.print(f"❌ Failed to migrate collection '{collection_name}'", style="red")
-        else:
-            # Migrate all collections
-            console.print("Migrating all collections to directory format...", style="blue")
-            success = manager.migrate_all_collections_to_directories()
-            
-            if success:
-                console.print("✅ All collections migrated successfully", style="green")
-            else:
-                console.print("⚠️ Some collections failed to migrate", style="yellow")
-                
-    except Exception as e:
-        console.print(f"Migration failed: {e}", style="red")
-
-
-@app.command("collection-xml-migrate")
-def collection_xml_migrate(
-    collection_name: str = typer.Argument(None, help="Collection name to migrate to XML (optional - migrates all if not specified)"),
-):
-    """Migrate templates from YAML+TXT to single XML format."""
-    try:
-        manager = CollectionManager()
-        
-        if collection_name:
-            # Migrate specific collection
-            console.print(f"Converting '{collection_name}' templates to XML format...", style="blue")
-            success = manager.migrate_templates_to_xml(collection_name)
-            
-            if success:
-                console.print(f"✅ Successfully converted '{collection_name}' templates to XML", style="green")
-            else:
-                console.print(f"❌ Failed to convert '{collection_name}' templates", style="red")
-        else:
-            # Migrate all collections
-            console.print("Converting all templates to XML format...", style="blue")
-            success = manager.migrate_templates_to_xml()
-            
-            if success:
-                console.print("✅ All templates converted to XML successfully", style="green")
-            else:
-                console.print("⚠️ Some templates failed to convert", style="yellow")
-                
-    except Exception as e:
-        console.print(f"XML migration failed: {e}", style="red")
-
-
-@app.command("collection-to-xml")
-def collection_to_xml(
-    collection_name: str = typer.Argument(None, help="Collection name to migrate to XML (optional - migrates all if not specified)"),
-):
-    """Migrate directory-based collections to single XML file format."""
-    try:
-        manager = CollectionManager()
-        
-        if collection_name:
-            # Migrate specific collection
-            console.print(f"Converting '{collection_name}' collection to XML format...", style="blue")
-            success = manager.migrate_directory_to_xml_collection(collection_name)
-            
-            if success:
-                console.print(f"✅ Successfully converted '{collection_name}' collection to XML", style="green")
-            else:
-                console.print(f"❌ Failed to convert '{collection_name}' collection", style="red")
-        else:
-            # Migrate all collections
-            console.print("Converting all directory collections to XML format...", style="blue")
-            success = manager.migrate_all_collections_to_xml()
-            
-            if success:
-                console.print("✅ All collections converted to XML successfully", style="green")
-            else:
-                console.print("⚠️ Some collections failed to convert", style="yellow")
-                
-    except Exception as e:
-        console.print(f"Collection XML migration failed: {e}", style="red")
-
-
 # Provider management commands
-provider_app = typer.Typer(help="Manage custom API providers")
-
+provider_app = typer.Typer(name="provider", help="Manage custom API providers")
 
 @provider_app.command("add")
 def provider_add(
-    name: str = typer.Argument(..., help="Name of the custom provider"),
-    base_url: str = typer.Argument(..., help="Base URL for the API endpoint"),
-    default_model: Optional[str] = typer.Option(
-        None, "--model", help="Default model for this provider"
-    ),
-    header: Optional[List[str]] = typer.Option(
-        None, "--header", help="Custom headers in key:value format"
-    ),
-    auth_type: str = typer.Option(
-        "bearer", "--auth-type", help="Authentication type (bearer, api-key)"
-    ),
+    name: Optional[str] = typer.Argument(None, help="Provider name (optional - will prompt if not provided)"),
+    base_url: Optional[str] = typer.Argument(None, help="Base URL for the API (optional - will prompt if not provided)"),
+    quick: bool = typer.Option(False, "--quick", "-q", help="Skip wizard and use minimal setup"),
 ):
-    """Add a custom API provider."""
-    config = Config()
-
-    # Parse headers
-    headers = {}
-    if header:
-        for h in header:
-            if ":" not in h:
-                console.print(
-                    f"Invalid header format: {h}. Use key:value format", style="red"
-                )
-                return
-            key, value = h.split(":", 1)
-            headers[key.strip()] = value.strip()
-
-    success = config.add_custom_provider(
-        name=name,
-        base_url=base_url,
-        default_model=default_model,
-        headers=headers,
-        auth_type=auth_type,
-    )
-
-    if success:
-        console.print(f"Custom provider '{name}' added successfully!", style="green")
-        console.print(f"Usage: aix run <prompt> --provider custom:{name}", style="cyan")
-    else:
-        console.print(f"Failed to add custom provider '{name}'", style="red")
-
+    """Add a custom API provider with guided setup."""
+    console = Console()
+    
+    try:
+        config = Config()
+        
+        # Quick mode for users who want the old behavior
+        if quick and name and base_url:
+            success = config.add_custom_provider(name=name, base_url=base_url)
+            if success:
+                console.print(f"Custom provider '{name}' added successfully!", style="green")
+                console.print(f"Use with: aix run <prompt> --provider custom:{name}", style="cyan")
+            else:
+                console.print(f"Failed to add provider '{name}'", style="red")
+                raise typer.Exit(1)
+            return
+        
+        # Wizard mode
+        console.print("🔧 [bold cyan]Custom API Provider Setup Wizard[/bold cyan]")
+        console.print("This wizard will help you configure a custom API provider step by step.\n")
+        
+        # Step 1: Provider name
+        if not name:
+            console.print("[bold]Step 1: Provider Name[/bold]")
+            console.print("Choose a unique name to identify this provider (e.g., 'ollama', 'local-api')")
+            name = typer.prompt("Provider name", type=str)
+            
+            # Check if provider already exists
+            if config.get_custom_provider(name):
+                console.print(f"❌ Provider '{name}' already exists!", style="red")
+                overwrite = typer.confirm("Do you want to overwrite it?")
+                if not overwrite:
+                    console.print("Setup cancelled.", style="yellow")
+                    raise typer.Exit(0)
+            console.print()
+        
+        # Step 2: Base URL
+        if not base_url:
+            console.print("[bold]Step 2: API Base URL[/bold]")
+            console.print("Enter the base URL for your API endpoint (must end with /v1 for OpenAI compatibility)")
+            console.print("Examples:")
+            console.print("  • Ollama: http://localhost:11434/v1")
+            console.print("  • Local API: http://localhost:8080/v1")
+            console.print("  • Remote API: https://api.example.com/v1")
+            base_url = typer.prompt("Base URL", type=str)
+            
+            # Validate URL format
+            if not base_url.startswith(('http://', 'https://')):
+                console.print("⚠️  URL should start with http:// or https://", style="yellow")
+            if not base_url.endswith('/v1'):
+                console.print("⚠️  For OpenAI compatibility, URL should end with /v1", style="yellow")
+            console.print()
+        
+        # Step 3: Default model (optional)
+        console.print("[bold]Step 3: Default Model (Optional)[/bold]")
+        console.print("Specify a default model name for this provider (can be left empty)")
+        console.print("Examples: 'llama3.2', 'gpt-3.5-turbo', 'claude-3-haiku'")
+        default_model = typer.prompt("Default model", default="", show_default=False)
+        if not default_model.strip():
+            default_model = None
+        else:
+            default_model = default_model.strip()
+        console.print()
+        
+        # Step 4: Authentication
+        console.print("[bold]Step 4: Authentication (Optional)[/bold]")
+        console.print("Does this API require authentication?")
+        needs_auth = typer.confirm("Configure authentication?", default=False)
+        
+        api_key = None
+        headers = {}
+        
+        if needs_auth:
+            console.print("\nChoose authentication method:")
+            console.print("1. API Key (most common)")
+            console.print("2. Custom headers")
+            console.print("3. Both")
+            
+            auth_choice = typer.prompt("Choose option", type=int, default=1)
+            
+            if auth_choice in [1, 3]:
+                console.print("\n[bold]API Key Setup[/bold]")
+                api_key = typer.prompt("API key", hide_input=True)
+            
+            if auth_choice in [2, 3]:
+                console.print("\n[bold]Custom Headers Setup[/bold]")
+                console.print("Add custom headers (press Enter when done)")
+                
+                while True:
+                    header_input = typer.prompt("Header (format: Key:Value)", default="", show_default=False)
+                    if not header_input.strip():
+                        break
+                    
+                    if ":" not in header_input:
+                        console.print("❌ Invalid format. Use Key:Value", style="red")
+                        continue
+                    
+                    key, value = header_input.split(":", 1)
+                    headers[key.strip()] = value.strip()
+                    console.print(f"✅ Added header: {key.strip()}", style="green")
+        
+        console.print()
+        
+        # Step 5: Review and confirm
+        console.print("[bold]Step 5: Review Configuration[/bold]")
+        console.print("┌─────────────────────────────────────┐")
+        console.print(f"│ Provider Name: [cyan]{name}[/cyan]")
+        console.print(f"│ Base URL: [cyan]{base_url}[/cyan]")
+        console.print(f"│ Default Model: [cyan]{default_model or 'Not set'}[/cyan]")
+        console.print(f"│ API Key: [cyan]{'Configured' if api_key else 'Not set'}[/cyan]")
+        console.print(f"│ Custom Headers: [cyan]{len(headers)} configured[/cyan]")
+        console.print("└─────────────────────────────────────┘")
+        
+        if not typer.confirm("\nProceed with this configuration?", default=True):
+            console.print("Setup cancelled.", style="yellow")
+            raise typer.Exit(0)
+        
+        # Step 6: Save configuration
+        console.print("\n[bold]Step 6: Saving Configuration[/bold]")
+        
+        success = config.add_custom_provider(
+            name=name,
+            base_url=base_url,
+            default_model=default_model,
+            headers=headers
+        )
+        
+        if not success:
+            console.print("❌ Failed to save provider configuration", style="red")
+            raise typer.Exit(1)
+        
+        # Set API key if provided
+        if api_key:
+            config.set_api_key(f"custom:{name}", api_key)
+        
+        # Success message
+        console.print(f"✅ [bold green]Provider '{name}' configured successfully![/bold green]")
+        console.print(f"\n[bold]Usage:[/bold]")
+        console.print(f"  aix run <prompt> --provider custom:{name}")
+        
+        if default_model:
+            console.print(f"  aix run <prompt> --provider custom:{name} --model {default_model}")
+        
+        console.print(f"\n[bold]Management:[/bold]")
+        console.print(f"  aix provider info {name}    # View details")
+        console.print(f"  aix provider remove {name}  # Remove provider")
+        
+    except KeyboardInterrupt:
+        console.print("\n\nSetup cancelled.", style="yellow")
+        raise typer.Exit(0)
+    except Exception as e:
+        console.print(f"\n❌ Error during setup: {e}", style="red")
+        raise typer.Exit(1)
 
 @provider_app.command("list")
 def provider_list():
     """List all custom providers."""
-    config = Config()
-    custom_providers = config.get_custom_providers()
-
-    if not custom_providers:
-        console.print("No custom providers configured", style="yellow")
-        console.print("Add one with: aix provider add <name> <base-url>", style="dim")
-        return
-
-    table = Table(title="Custom Providers")
-    table.add_column("Name", style="cyan")
-    table.add_column("Base URL", style="green")
-    table.add_column("Default Model", style="yellow")
-    table.add_column("Auth Type", style="blue")
-
-    for name, config_data in custom_providers.items():
-        table.add_row(
-            name,
-            config_data.get("base_url", ""),
-            config_data.get("default_model", "Not set"),
-            config_data.get("auth_type", "bearer"),
-        )
-
-    console.print(table)
-
-
-@provider_app.command("remove")
-def provider_remove(
-    name: str = typer.Argument(..., help="Name of the custom provider to remove"),
-):
-    """Remove a custom provider."""
-    config = Config()
-
-    if config.remove_custom_provider(name):
-        console.print(f"Custom provider '{name}' removed successfully!", style="green")
-    else:
-        console.print(f"Custom provider '{name}' not found", style="red")
-
+    console = Console()
+    
+    try:
+        config = Config()
+        providers = config.get_custom_providers()
+        
+        if not providers:
+            console.print("No custom providers configured.", style="yellow")
+            console.print("Add one with: aix provider add <name> <base-url>", style="cyan")
+            return
+        
+        console.print("Custom API Providers:", style="bold")
+        for name, provider_data in providers.items():
+            console.print(f"  {name}: {provider_data.get('base_url', 'N/A')}", style="green")
+            if provider_data.get("model"):
+                console.print(f"    Default model: {provider_data['model']}", style="dim")
+                
+    except Exception as e:
+        console.print(f"Error listing providers: {e}", style="red")
+        raise typer.Exit(1)
 
 @provider_app.command("info")
-def provider_info(name: str = typer.Argument(..., help="Name of the custom provider")):
+def provider_info(name: str = typer.Argument(..., help="Provider name")):
     """Show detailed information about a custom provider."""
-    config = Config()
-    provider_config = config.get_custom_provider(name)
+    console = Console()
+    
+    try:
+        config = Config()
+        provider_data = config.get_custom_provider(name)
+        
+        if not provider_data:
+            console.print(f"Custom provider '{name}' not found.", style="red")
+            raise typer.Exit(1)
+        
+        console.print(f"Provider: {name}", style="bold green")
+        console.print(f"Base URL: {provider_data.get('base_url', 'N/A')}")
+        console.print(f"Default Model: {provider_data.get('default_model', 'Not set')}")
+        
+        headers = provider_data.get('headers', {})
+        if headers:
+            console.print("Custom Headers:", style="bold")
+            for key, value in headers.items():
+                # Hide sensitive values
+                display_value = "***" if key.lower() in ["authorization", "api-key", "x-api-key"] else value
+                console.print(f"  {key}: {display_value}")
+        
+        if provider_data.get('api_key'):
+            console.print("API Key: *** (configured)", style="green")
+        
+        console.print(f"Usage: aix run <prompt> --provider custom:{name}", style="cyan")
+        
+    except Exception as e:
+        console.print(f"Error getting provider info: {e}", style="red")
+        raise typer.Exit(1)
 
-    if not provider_config:
-        console.print(f"Custom provider '{name}' not found", style="red")
-        return
+@provider_app.command("remove")
+def provider_remove(name: str = typer.Argument(..., help="Provider name")):
+    """Remove a custom provider."""
+    console = Console()
+    
+    try:
+        config = Config()
+        
+        # Check if provider exists
+        if not config.get_custom_provider(name):
+            console.print(f"Custom provider '{name}' not found.", style="red")
+            raise typer.Exit(1)
+        
+        success = config.remove_custom_provider(name)
+        
+        if success:
+            console.print(f"Custom provider '{name}' removed successfully!", style="green")
+        else:
+            console.print(f"Failed to remove provider '{name}'", style="red")
+            raise typer.Exit(1)
+            
+    except Exception as e:
+        console.print(f"Error removing provider: {e}", style="red")
+        raise typer.Exit(1)
 
-    console.print(f"[bold cyan]Custom Provider: {name}[/bold cyan]")
-    console.print(f"Base URL: {provider_config.get('base_url', 'Not set')}")
-    console.print(f"Default Model: {provider_config.get('default_model', 'Not set')}")
-    console.print(f"Auth Type: {provider_config.get('auth_type', 'bearer')}")
-
-    headers = provider_config.get("headers", {})
-    if headers:
-        console.print("Custom Headers:")
-        for key, value in headers.items():
-            console.print(f"  {key}: {value}")
-    else:
-        console.print("Custom Headers: None")
-
+@provider_app.command("quick-setup")
+def provider_quick_setup():
+    """Quick setup for common API providers with presets."""
+    console = Console()
+    
+    try:
+        config = Config()
+        
+        console.print("⚡ [bold cyan]Quick Provider Setup[/bold cyan]")
+        console.print("Choose from common provider configurations:\n")
+        
+        presets = {
+            "1": {
+                "name": "ollama",
+                "display": "Ollama (Local AI)",
+                "base_url": "http://localhost:11434/v1",
+                "default_model": "llama3.2",
+                "description": "Local Ollama instance with llama3.2 model"
+            },
+            "2": {
+                "name": "vllm",
+                "display": "vLLM (Local Server)",
+                "base_url": "http://localhost:8000/v1",
+                "default_model": "",
+                "description": "Local vLLM server instance"
+            },
+            "3": {
+                "name": "lm-studio",
+                "display": "LM Studio (Local)",
+                "base_url": "http://localhost:1234/v1",
+                "default_model": "",
+                "description": "LM Studio local server"
+            },
+            "4": {
+                "name": "custom",
+                "display": "Custom Configuration",
+                "base_url": "",
+                "default_model": "",
+                "description": "Start the full wizard for custom setup"
+            }
+        }
+        
+        for key, preset in presets.items():
+            console.print(f"[bold]{key}.[/bold] [cyan]{preset['display']}[/cyan] - {preset['description']}")
+        
+        choice = typer.prompt("\nSelect preset", type=str, default="1")
+        
+        if choice not in presets:
+            console.print("❌ Invalid selection", style="red")
+            raise typer.Exit(1)
+        
+        preset = presets[choice]
+        
+        if choice == "4":
+            # Launch full wizard
+            console.print("\nStarting full wizard...\n")
+            provider_add()
+            return
+        
+        # Use preset but allow customization
+        console.print(f"\n🔧 Setting up [cyan]{preset['display']}[/cyan]")
+        
+        # Get provider name (allow customization)
+        default_name = preset["name"]
+        name = typer.prompt("Provider name", default=default_name)
+        
+        # Check if already exists
+        if config.get_custom_provider(name):
+            console.print(f"❌ Provider '{name}' already exists!", style="red")
+            overwrite = typer.confirm("Do you want to overwrite it?")
+            if not overwrite:
+                console.print("Setup cancelled.", style="yellow")
+                raise typer.Exit(0)
+        
+        # Get base URL (allow customization)
+        base_url = typer.prompt("Base URL", default=preset["base_url"])
+        
+        # Get model if preset has one
+        default_model = None
+        if preset["default_model"]:
+            model_input = typer.prompt("Default model", default=preset["default_model"])
+            if model_input.strip():
+                default_model = model_input.strip()
+        
+        # Optional authentication
+        needs_auth = typer.confirm("Configure API key?", default=False)
+        api_key = None
+        if needs_auth:
+            api_key = typer.prompt("API key", hide_input=True)
+        
+        # Save configuration
+        success = config.add_custom_provider(
+            name=name,
+            base_url=base_url,
+            default_model=default_model,
+            headers={}
+        )
+        
+        if not success:
+            console.print("❌ Failed to save provider configuration", style="red")
+            raise typer.Exit(1)
+        
+        if api_key:
+            config.set_api_key(f"custom:{name}", api_key)
+        
+        # Success message
+        console.print(f"✅ [bold green]Provider '{name}' configured successfully![/bold green]")
+        console.print(f"\n[bold]Usage:[/bold]")
+        console.print(f"  aix run <prompt> --provider custom:{name}")
+        
+        if default_model:
+            console.print(f"  aix run <prompt> --provider custom:{name} --model {default_model}")
+        
+    except KeyboardInterrupt:
+        console.print("\n\nSetup cancelled.", style="yellow")
+        raise typer.Exit(0)
+    except Exception as e:
+        console.print(f"\n❌ Error during setup: {e}", style="red")
+        raise typer.Exit(1)
 
 app.add_typer(provider_app, name="provider")
 
