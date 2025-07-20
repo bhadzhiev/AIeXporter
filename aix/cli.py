@@ -157,11 +157,9 @@ def list(
 [bold cyan]Template:[/bold cyan]
 {prompt.template[:200]}{"..." if len(prompt.template) > 200 else ""}"""
 
-            console.print(
-                Panel(
-                    panel_content, title=f"Prompt {i + 1}/{len(prompts)}", expand=False
-                )
-            )
+            console.print(f"Prompt {i + 1}/{len(prompts)}")
+            console.print(panel_content)
+            console.print()
     else:
         # Standard table view
         title = "Saved Prompts"
@@ -173,25 +171,14 @@ def list(
         if tag:
             title += f" - filtered by tag: {tag}"
 
-        table = Table(title=title)
-        table.add_column("Name", style="cyan", no_wrap=True)
-        table.add_column("Variables", style="magenta")
-        table.add_column("Tags", style="green")
-        table.add_column("Description", style="dim")
-
         for prompt in prompts:
             variables = ", ".join(prompt.variables) if prompt.variables else "None"
             tags = ", ".join(prompt.tags) if prompt.tags else "None"
-            table.add_row(
-                prompt.name,
-                variables,
-                tags,
-                (prompt.description or "")[:50] + "..."
-                if prompt.description and len(prompt.description) > 50
-                else (prompt.description or ""),
-            )
-
-        console.print(table)
+            description = (prompt.description or "")[:50] + "..." if prompt.description and len(prompt.description) > 50 else (prompt.description or "")
+            console.print(f"{prompt.name}: {description}")
+            console.print(f"  Variables: {variables}")
+            console.print(f"  Tags: {tags}")
+            console.print()
 
         # Show summary with collection context
         summary = f"[dim]Total: {len(prompts)} prompt(s)"
@@ -542,9 +529,8 @@ def run(
         generated_prompt, _ = prompt.render(param_dict, execute_commands=False, execute_generators=True)
 
     if dry_run:
-        console.print(
-            Panel(generated_prompt, title="Dry Run - Generated Prompt", expand=False)
-        )
+        console.print("Dry Run - Generated Prompt:")
+        console.print(generated_prompt)
         return
 
     # If not executing via API, just show/save the generated prompt
@@ -565,13 +551,8 @@ def run(
     api_key = config.get_api_key(selected_provider)
 
     # Always show the generated prompt before execution
-    console.print(
-        Panel(
-            generated_prompt,
-            title="Generated Prompt (before API execution)",
-            expand=False,
-        )
-    )
+    console.print("Generated Prompt (before API execution):")
+    console.print(generated_prompt)
 
     if not api_key:
         console.print(
@@ -673,7 +654,8 @@ def run(
             output.write_text(response_text)
             console.print(f"\nResponse saved to {output}", style="green")
         else:
-            console.print(Panel(response_text, title="API Response", expand=False))
+            console.print("API Response:")
+            console.print(response_text)
 
         client.close()
 

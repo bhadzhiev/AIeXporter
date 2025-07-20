@@ -37,13 +37,13 @@ def test_cmd(
     if success:
         console.print("Command executed successfully", style="green")
         if stdout:
-            console.print(Panel(stdout, title="Output", expand=False))
+            console.print("Output:")
+        console.print(stdout)
     else:
         console.print("Command failed", style="red")
         if stderr:
-            console.print(
-                Panel(stderr, title="Error", expand=False, border_style="red")
-            )
+            console.print("Error:")
+            console.print(stderr)
 
 
 def show_commands():
@@ -60,14 +60,8 @@ def show_commands():
     
     if disabled_commands:
         console.print("\nDisabled Commands:", style="bold red")
-        table = Table()
-        table.add_column("Disabled Pattern", style="red")
-        table.add_column("Reason", style="dim")
-
         for cmd in disabled_commands:
-            table.add_row(cmd, "Security restriction")
-        
-        console.print(table)
+            console.print(f"  {cmd}: Security restriction")
     else:
         console.print("\nNo additional disabled commands (using default security list)", style="dim")
         
@@ -96,7 +90,8 @@ def template_test(
                 variables[key.strip()] = value.strip()
 
     console.print("Testing template:", style="bold")
-    console.print(Panel(template, title="Template", expand=False))
+    console.print("Template:")
+    console.print(template)
 
     # Extract commands first
     commands = executor.extract_commands(template)
@@ -113,10 +108,12 @@ def template_test(
             console.print("\nCommand outputs:", style="blue")
             for placeholder, output in command_outputs.items():
                 console.print(f"  {placeholder}")
-                console.print(Panel(output, border_style="blue", expand=False))
+                console.print("Output:")
+                console.print(output)
 
         console.print("\nFinal result:", style="green")
-        console.print(Panel(result, title="Processed Template", expand=False))
+        console.print("Processed Template:")
+        console.print(result)
 
     except Exception as e:
         console.print(f"Error processing template: {e}", style="red")
