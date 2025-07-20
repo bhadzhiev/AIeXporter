@@ -2,7 +2,7 @@
 
 aix supports multiple AI providers because variety is the spice of life (and sometimes OpenAI is down).
 
-## Supported Providers
+## Supported Providers/
 
 ### OpenRouter (Default)
 - **Model**: `meta-llama/llama-3.2-3b-instruct:free`
