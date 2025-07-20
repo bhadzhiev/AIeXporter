@@ -1,3 +1,9 @@
+## v0.11.0 (2025-07-20)
+
+### Feat
+
+- enable --execute flag by default with toggle option
+
 ## v0.10.0 (2025-07-20)
 
 ### Feat
