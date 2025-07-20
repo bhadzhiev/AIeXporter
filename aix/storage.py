@@ -1,5 +1,3 @@
-import json
-import yaml
 import os
 from pathlib import Path
 from typing import List, Optional, Dict, Any
@@ -20,26 +18,6 @@ class PromptStorage:
                 self.storage_path = Path.home() / ".prompts"
         self.storage_path.mkdir(exist_ok=True)
 
-    def _get_prompt_path(self, name: str, format: str = "yaml", collection: str = None) -> Path:
-        """Get the file path for a prompt metadata."""
-        extension = "yaml" if format == "yaml" else "json"
-        if collection:
-            # Store in collection directory
-            collection_dir = self.storage_path / "collections" / collection
-            return collection_dir / f"{name}.{extension}"
-        else:
-            # Store in main directory (legacy)
-            return self.storage_path / f"{name}.{extension}"
-
-    def _get_template_path(self, name: str, collection: str = None) -> Path:
-        """Get the file path for a prompt template content."""
-        if collection:
-            # Store in collection directory
-            collection_dir = self.storage_path / "collections" / collection
-            return collection_dir / f"{name}.txt"
-        else:
-            # Store in main directory (legacy)
-            return self.storage_path / f"{name}.txt"
 
     def _get_xml_template_path(self, name: str, collection: str = None) -> Path:
         """Get the file path for an XML template."""
@@ -51,37 +29,9 @@ class PromptStorage:
             # Store in main directory
             return self.storage_path / f"{name}.xml"
 
-    def save_prompt(self, prompt: PromptTemplate, format: str = "yaml", collection: str = None) -> bool:
-        """Save a prompt template to storage using separated files."""
-        try:
-            # Create collection directory if needed
-            if collection:
-                collection_dir = self.storage_path / "collections" / collection
-                collection_dir.mkdir(parents=True, exist_ok=True)
-
-            # Save template content to .txt file
-            template_path = self._get_template_path(prompt.name, collection)
-            with open(template_path, "w", encoding="utf-8") as f:
-                f.write(prompt.template)
-
-            # Save metadata without template content
-            metadata_path = self._get_prompt_path(prompt.name, format, collection)
-            metadata = prompt.to_dict()
-            # Remove template content from metadata, store reference instead
-            metadata.pop("template", None)
-            metadata["template_file"] = f"{prompt.name}.txt"
-
-            if format == "yaml":
-                with open(metadata_path, "w") as f:
-                    yaml.dump(metadata, f, default_flow_style=False, sort_keys=False)
-            else:  # json
-                with open(metadata_path, "w") as f:
-                    json.dump(metadata, f, indent=2)
-
-            return True
-        except Exception as e:
-            print(f"Error saving prompt: {e}")
-            return False
+    def save_prompt(self, prompt: PromptTemplate, collection: str = None) -> bool:
+        """Save a prompt template as XML (default format)."""
+        return self.save_prompt_xml(prompt, collection)
 
     def save_prompt_xml(self, prompt: PromptTemplate, collection: str = None) -> bool:
         """Save a prompt template as a single XML file."""
@@ -104,22 +54,15 @@ class PromptStorage:
             return False
 
     def get_prompt(self, name: str, collection: str = None) -> Optional[PromptTemplate]:
-        """Load a prompt template from storage (supports XML, YAML+TXT formats)."""
+        """Load a prompt template from storage (XML format only)."""
         # If collection is specified, try that first
         if collection:
-            # Try XML first, then fallback to YAML+TXT
             prompt = self._get_prompt_xml_from_location(name, collection)
-            if prompt:
-                return prompt
-            prompt = self._get_prompt_from_location(name, collection)
             if prompt:
                 return prompt
         
         # Try main directory (legacy location)
         prompt = self._get_prompt_xml_from_location(name, None)
-        if prompt:
-            return prompt
-        prompt = self._get_prompt_from_location(name, None)
         if prompt:
             return prompt
             
@@ -129,11 +72,7 @@ class PromptStorage:
             if collections_path.exists():
                 for collection_dir in collections_path.glob("*"):
                     if collection_dir.is_dir():
-                        # Try XML first, then YAML+TXT
                         prompt = self._get_prompt_xml_from_location(name, collection_dir.name)
-                        if prompt:
-                            return prompt
-                        prompt = self._get_prompt_from_location(name, collection_dir.name)
                         if prompt:
                             return prompt
         
@@ -151,107 +90,112 @@ class PromptStorage:
                 print(f"Error loading XML prompt {name}: {e}")
         return None
 
-    def _get_prompt_from_location(self, name: str, collection: str = None) -> Optional[PromptTemplate]:
-        """Load a prompt template from a specific location."""
-        # Try YAML first, then JSON for metadata
-        for format in ["yaml", "json"]:
-            metadata_path = self._get_prompt_path(name, format, collection)
-            if metadata_path.exists():
-                try:
-                    # Load metadata
-                    if format == "yaml":
-                        with open(metadata_path, "r") as f:
-                            metadata = yaml.safe_load(f)
-                    else:  # json
-                        with open(metadata_path, "r") as f:
-                            metadata = json.load(f)
-
-                    # Load template content from .txt file
-                    template_path = self._get_template_path(name, collection)
-                    if template_path.exists():
-                        with open(template_path, "r", encoding="utf-8") as f:
-                            template_content = f.read()
-                    else:
-                        # Fallback: check if template is in metadata (old format)
-                        template_content = metadata.get("template", "")
-
-                    # Combine metadata and template content
-                    metadata["template"] = template_content
-                    # Remove template_file reference as it's internal
-                    metadata.pop("template_file", None)
-
-                    return PromptTemplate.from_dict(metadata)
-                except Exception as e:
-                    print(f"Error loading prompt {name}: {e}")
-                    continue
-
-        return None
 
     def list_prompts(self) -> List[PromptTemplate]:
-        """List all available prompt templates."""
+        """List all available prompt templates from XML files."""
         prompts = []
         seen_names = set()
 
-        for file_path in self.storage_path.glob("*"):
-            if file_path.suffix in [".yaml", ".yml", ".json"]:
-                name = file_path.stem
-                # Skip config files
-                if name in ["config", "settings"] or name in seen_names:
-                    continue
-                seen_names.add(name)
+        # Check main directory for XML files
+        for file_path in self.storage_path.glob("*.xml"):
+            name = file_path.stem
+            if name in seen_names:
+                continue
+            seen_names.add(name)
 
-                prompt = self.get_prompt(name)
-                if prompt:
-                    prompts.append(prompt)
+            prompt = self.get_prompt(name)
+            if prompt:
+                prompts.append(prompt)
+
+        # Check collections directories for XML files
+        collections_path = self.storage_path / "collections"
+        if collections_path.exists():
+            for collection_dir in collections_path.glob("*"):
+                if collection_dir.is_dir():
+                    for file_path in collection_dir.glob("*.xml"):
+                        name = file_path.stem
+                        if name in seen_names:
+                            continue
+                        seen_names.add(name)
+
+                        prompt = self.get_prompt(name, collection_dir.name)
+                        if prompt:
+                            prompts.append(prompt)
 
         return sorted(prompts, key=lambda p: p.name)
 
-    def delete_prompt(self, name: str) -> bool:
-        """Delete a prompt template from storage (both metadata and content files)."""
-        deleted = False
-
-        # Delete metadata files
-        for format in ["yaml", "json"]:
-            metadata_path = self._get_prompt_path(name, format)
-            if metadata_path.exists():
-                try:
-                    metadata_path.unlink()
-                    deleted = True
-                except Exception as e:
-                    print(f"Error deleting {metadata_path}: {e}")
-
-        # Delete template content file
-        template_path = self._get_template_path(name)
-        if template_path.exists():
+    def delete_prompt(self, name: str, collection: str = None) -> bool:
+        """Delete a prompt template from storage (XML format)."""
+        xml_path = self._get_xml_template_path(name, collection)
+        
+        if xml_path.exists():
             try:
-                template_path.unlink()
-                deleted = True
-            except Exception as e:
-                print(f"Error deleting {template_path}: {e}")
-
-        return deleted
-
-    def prompt_exists(self, name: str) -> bool:
-        """Check if a prompt with given name exists."""
-        for format in ["yaml", "json"]:
-            if self._get_prompt_path(name, format).exists():
+                xml_path.unlink()
                 return True
+            except Exception as e:
+                print(f"Error deleting {xml_path}: {e}")
+                return False
+        
+        # If not found in specified collection, search all collections
+        if not collection:
+            collections_path = self.storage_path / "collections"
+            if collections_path.exists():
+                for collection_dir in collections_path.glob("*"):
+                    if collection_dir.is_dir():
+                        xml_path = self._get_xml_template_path(name, collection_dir.name)
+                        if xml_path.exists():
+                            try:
+                                xml_path.unlink()
+                                return True
+                            except Exception as e:
+                                print(f"Error deleting {xml_path}: {e}")
+        
+        return False
+
+    def prompt_exists(self, name: str, collection: str = None) -> bool:
+        """Check if a prompt with given name exists."""
+        xml_path = self._get_xml_template_path(name, collection)
+        if xml_path.exists():
+            return True
+            
+        # If not found and no collection specified, search all collections
+        if not collection:
+            collections_path = self.storage_path / "collections"
+            if collections_path.exists():
+                for collection_dir in collections_path.glob("*"):
+                    if collection_dir.is_dir():
+                        xml_path = self._get_xml_template_path(name, collection_dir.name)
+                        if xml_path.exists():
+                            return True
         return False
 
     def get_storage_info(self) -> Dict[str, Any]:
         """Get information about the storage location and contents."""
         prompts = self.list_prompts()
-        total_size = sum(
-            f.stat().st_size for f in self.storage_path.iterdir() if f.is_file()
-        )
+        
+        # Calculate total size including all XML files
+        total_size = 0
+        xml_count = 0
+        
+        # Main directory XML files
+        for f in self.storage_path.glob("*.xml"):
+            total_size += f.stat().st_size
+            xml_count += 1
+            
+        # Collections directory XML files
+        collections_path = self.storage_path / "collections"
+        if collections_path.exists():
+            for collection_dir in collections_path.glob("*"):
+                if collection_dir.is_dir():
+                    for f in collection_dir.glob("*.xml"):
+                        total_size += f.stat().st_size
+                        xml_count += 1
 
         return {
             "storage_path": str(self.storage_path),
             "total_prompts": len(prompts),
             "total_size_bytes": total_size,
             "formats": {
-                "yaml": len(list(self.storage_path.glob("*.yaml")))
-                + len(list(self.storage_path.glob("*.yml"))),
-                "json": len(list(self.storage_path.glob("*.json"))),
+                "xml": xml_count,
             },
         }

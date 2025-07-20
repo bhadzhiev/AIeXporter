@@ -76,10 +76,6 @@ class CollectionStorage:
         # File to track the currently loaded collection
         self.current_collection_file = self.storage_path / ".current_collection"
 
-    def _get_collection_path(self, name: str, format: str = "yaml") -> Path:
-        """Get the file path for a collection."""
-        extension = "yaml" if format == "yaml" else "json"
-        return self.collections_path / f"{name}.{extension}"
     
     def _get_collection_dir_path(self, name: str) -> Path:
         """Get the directory path for a collection."""
@@ -91,22 +87,8 @@ class CollectionStorage:
         return self._get_collection_dir_path(name) / f".collection.{extension}"
 
     def save_collection(self, collection: Collection, format: str = "yaml") -> bool:
-        """Save a collection to storage."""
-        try:
-            collection_path = self._get_collection_path(collection.name, format)
-            data = collection.to_dict()
-
-            if format == "yaml":
-                with open(collection_path, "w") as f:
-                    yaml.dump(data, f, default_flow_style=False, sort_keys=False)
-            else:  # json
-                with open(collection_path, "w") as f:
-                    json.dump(data, f, indent=2)
-
-            return True
-        except Exception as e:
-            print(f"Error saving collection: {e}")
-            return False
+        """Save a collection to directory format (default)."""
+        return self.save_collection_to_directory(collection, format)
 
     def save_collection_to_directory(self, collection: Collection, format: str = "yaml") -> bool:
         """Save a collection to its own directory with metadata file."""
@@ -134,30 +116,8 @@ class CollectionStorage:
             return False
 
     def get_collection(self, name: str) -> Optional[Collection]:
-        """Load a collection from storage (supports both old and new formats)."""
-        # First try to load from directory (new format)
-        collection_from_dir = self.get_collection_from_directory(name)
-        if collection_from_dir:
-            return collection_from_dir
-            
-        # Fall back to old format
-        for format in ["yaml", "json"]:
-            collection_path = self._get_collection_path(name, format)
-            if collection_path.exists():
-                try:
-                    if format == "yaml":
-                        with open(collection_path, "r") as f:
-                            data = yaml.safe_load(f)
-                    else:  # json
-                        with open(collection_path, "r") as f:
-                            data = json.load(f)
-
-                    return Collection.from_dict(data)
-                except Exception as e:
-                    print(f"Error loading collection {name}: {e}")
-                    continue
-
-        return None
+        """Load a collection from directory format."""
+        return self.get_collection_from_directory(name)
 
     def get_collection_from_directory(self, name: str) -> Optional[Collection]:
         """Load a collection from its directory."""
@@ -178,23 +138,9 @@ class CollectionStorage:
                     
                     # Add templates list by scanning directory
                     templates = []
-                    # Scan for XML templates (preferred format)
+                    # Scan for XML templates (only supported format)
                     for file_path in collection_dir.glob("*.xml"):
                         templates.append(file_path.stem)
-                    
-                    # Scan for YAML templates (legacy format)
-                    for file_path in collection_dir.glob("*.yaml"):
-                        if file_path.name != ".collection.yaml" and file_path.name != ".collection.json":
-                            template_name = file_path.stem
-                            if template_name not in templates:  # Don't duplicate XML templates
-                                templates.append(template_name)
-                    
-                    # Scan for JSON templates (legacy format)
-                    for file_path in collection_dir.glob("*.json"):
-                        if file_path.name != ".collection.yaml" and file_path.name != ".collection.json":
-                            template_name = file_path.stem
-                            if template_name not in templates:  # Don't duplicate XML/YAML templates
-                                templates.append(template_name)
                     
                     data["templates"] = templates
                     data["name"] = name  # Ensure name is set
@@ -207,11 +153,11 @@ class CollectionStorage:
         return None
 
     def list_collections(self) -> List[Collection]:
-        """List all available collections (supports both old and new formats)."""
+        """List all available collections from directory format."""
         collections = []
         seen_names = set()
 
-        # First scan for directory-based collections (new format)
+        # Scan for directory-based collections
         for dir_path in self.collections_path.glob("*"):
             if dir_path.is_dir():
                 name = dir_path.name
@@ -223,45 +169,28 @@ class CollectionStorage:
                 if collection:
                     collections.append(collection)
 
-        # Then scan for file-based collections (old format)
-        for file_path in self.collections_path.glob("*"):
-            if file_path.suffix in [".yaml", ".yml", ".json"]:
-                name = file_path.stem
-                if name in seen_names:
-                    continue
-                seen_names.add(name)
-
-                collection = self.get_collection(name)
-                if collection:
-                    collections.append(collection)
-
         return sorted(collections, key=lambda c: c.name)
 
     def delete_collection(self, name: str) -> bool:
-        """Delete a collection from storage."""
-        deleted = False
-
-        for format in ["yaml", "json"]:
-            collection_path = self._get_collection_path(name, format)
-            if collection_path.exists():
-                try:
-                    collection_path.unlink()
-                    deleted = True
-                except Exception as e:
-                    print(f"Error deleting {collection_path}: {e}")
-
-        # Clear current collection if it was the deleted one
-        if self.get_current_collection() == name:
-            self.clear_current_collection()
-
-        return deleted
+        """Delete a collection directory from storage."""
+        import shutil
+        
+        collection_dir = self._get_collection_dir_path(name)
+        if collection_dir.exists():
+            try:
+                shutil.rmtree(collection_dir)
+                # Clear current collection if it was the deleted one
+                if self.get_current_collection() == name:
+                    self.clear_current_collection()
+                return True
+            except Exception as e:
+                print(f"Error deleting collection directory {collection_dir}: {e}")
+        return False
 
     def collection_exists(self, name: str) -> bool:
-        """Check if a collection exists."""
-        for format in ["yaml", "json"]:
-            if self._get_collection_path(name, format).exists():
-                return True
-        return False
+        """Check if a collection directory exists."""
+        collection_dir = self._get_collection_dir_path(name)
+        return collection_dir.exists() and collection_dir.is_dir()
 
     def set_current_collection(self, name: str) -> bool:
         """Set the current active collection."""
@@ -366,7 +295,7 @@ class CollectionManager:
             updated_at=datetime.now().isoformat(),
         )
 
-        return self.collection_storage.save_collection(collection)
+        return self.collection_storage.save_collection_to_directory(collection)
 
     def load_collection(self, name: str) -> bool:
         """Load a collection as the current working collection."""
@@ -422,7 +351,7 @@ class CollectionManager:
             from datetime import datetime
 
             collection.updated_at = datetime.now().isoformat()
-            return self.collection_storage.save_collection(collection)
+            return self.collection_storage.save_collection_to_directory(collection)
 
         return False
 
@@ -440,7 +369,7 @@ class CollectionManager:
             from datetime import datetime
 
             collection.updated_at = datetime.now().isoformat()
-            return self.collection_storage.save_collection(collection)
+            return self.collection_storage.save_collection_to_directory(collection)
 
         return False
 

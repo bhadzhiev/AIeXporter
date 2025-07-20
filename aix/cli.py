@@ -24,7 +24,6 @@ from .completion import (
     complete_prompt_variables,
     complete_config_keys,
     complete_tags,
-    complete_formats,
 )
 
 
@@ -70,13 +69,6 @@ def create(
     tags: Optional[List[str]] = typer.Option(
         None, "--tag", "-t", help="Tags for organization", autocompletion=complete_tags
     ),
-    format: str = typer.Option(
-        "yaml",
-        "--format",
-        "-f",
-        help="Storage format (yaml/json)",
-        autocompletion=complete_formats,
-    ),
 ):
     """Create a new prompt template."""
     storage = PromptStorage()
@@ -93,7 +85,7 @@ def create(
         variables=PromptTemplate.extract_variables(unescaped_template),
     )
 
-    success = storage.save_prompt(prompt, format)
+    success = storage.save_prompt(prompt)
     if success:
         console.print(f"Prompt '{name}' created successfully!", style="green")
     else:
@@ -194,9 +186,9 @@ def list(
                 prompt.name,
                 variables,
                 tags,
-                prompt.description[:50] + "..."
-                if len(prompt.description) > 50
-                else prompt.description,
+                (prompt.description or "")[:50] + "..."
+                if prompt.description and len(prompt.description) > 50
+                else (prompt.description or ""),
             )
 
         console.print(table)

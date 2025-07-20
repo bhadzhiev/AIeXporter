@@ -180,11 +180,3 @@ def complete_tags(incomplete: str) -> List[str]:
         return []
 
 
-def complete_formats(incomplete: str) -> List[str]:
-    """Complete file format options."""
-    formats = ["yaml", "json"]
-
-    if incomplete:
-        formats = [f for f in formats if f.startswith(incomplete)]
-
-    return formats

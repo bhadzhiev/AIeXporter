@@ -11,25 +11,26 @@ class TestPromptStorage:
         assert storage.storage_path == temp_storage_dir
         assert storage.storage_path.exists()
 
-    def test_save_and_get_prompt_yaml(self, temp_storage_dir, sample_template):
-        """Test saving and retrieving a prompt in YAML format."""
+    def test_save_and_get_prompt_xml(self, temp_storage_dir, sample_template):
+        """Test saving and retrieving a prompt in XML format."""
         storage = PromptStorage(temp_storage_dir)
 
         prompt = PromptTemplate(**sample_template)
 
-        # Save prompt
-        success = storage.save_prompt(prompt, "yaml")
+        # Save prompt (defaults to XML)
+        success = storage.save_prompt(prompt)
         assert success is True
 
-        # Verify files exist
-        yaml_file = temp_storage_dir / "test-prompt.yaml"
-        txt_file = temp_storage_dir / "test-prompt.txt"
-        assert yaml_file.exists()
-        assert txt_file.exists()
+        # Verify XML file exists
+        xml_file = temp_storage_dir / "test-prompt.xml"
+        assert xml_file.exists()
 
-        # Verify content
-        with open(txt_file) as f:
-            assert sample_template["template"] in f.read()
+        # Verify content contains template text
+        with open(xml_file, encoding="utf-8") as f:
+            xml_content = f.read()
+            assert sample_template["template"] in xml_content
+            assert sample_template["name"] in xml_content
+            assert sample_template["description"] in xml_content
 
         # Retrieve prompt
         retrieved = storage.get_prompt("test-prompt")
@@ -39,26 +40,26 @@ class TestPromptStorage:
         assert retrieved.description == sample_template["description"]
         assert retrieved.tags == sample_template["tags"]
 
-    def test_save_and_get_prompt_json(self, temp_storage_dir, sample_template):
-        """Test saving and retrieving a prompt in JSON format."""
+    def test_save_and_get_prompt_with_collection(self, temp_storage_dir, sample_template):
+        """Test saving and retrieving a prompt in a collection."""
         storage = PromptStorage(temp_storage_dir)
 
         prompt = PromptTemplate(**sample_template)
 
-        # Save prompt
-        success = storage.save_prompt(prompt, "json")
+        # Save prompt in a collection
+        success = storage.save_prompt_xml(prompt, "test-collection")
         assert success is True
 
-        # Verify files exist
-        json_file = temp_storage_dir / "test-prompt.json"
-        txt_file = temp_storage_dir / "test-prompt.txt"
-        assert json_file.exists()
-        assert txt_file.exists()
+        # Verify XML file exists in collection directory
+        collection_dir = temp_storage_dir / "collections" / "test-collection"
+        xml_file = collection_dir / "test-prompt.xml"
+        assert xml_file.exists()
 
-        # Retrieve prompt
-        retrieved = storage.get_prompt("test-prompt")
+        # Retrieve prompt from collection
+        retrieved = storage.get_prompt("test-prompt", "test-collection")
         assert retrieved is not None
         assert retrieved.name == sample_template["name"]
+        assert retrieved.template == sample_template["template"]
 
     def test_list_prompts(self, temp_storage_dir):
         """Test listing all available prompts."""
@@ -109,8 +110,7 @@ class TestPromptStorage:
 
         # Verify it's gone
         assert storage.prompt_exists("to-delete") is False
-        assert temp_storage_dir / "to-delete.yaml" not in temp_storage_dir.iterdir()
-        assert temp_storage_dir / "to-delete.txt" not in temp_storage_dir.iterdir()
+        assert temp_storage_dir / "to-delete.xml" not in temp_storage_dir.iterdir()
 
     def test_get_storage_info(self, temp_storage_dir):
         """Test getting storage information."""
@@ -125,8 +125,8 @@ class TestPromptStorage:
         assert info["storage_path"] == str(temp_storage_dir)
         assert info["total_prompts"] == 1
         assert info["total_size_bytes"] > 0
-        assert "yaml" in info["formats"]
-        assert "json" in info["formats"]
+        assert "xml" in info["formats"]
+        assert info["formats"]["xml"] == 1
 
     def test_get_nonexistent_prompt(self, temp_storage_dir):
         """Test getting a non-existent prompt."""

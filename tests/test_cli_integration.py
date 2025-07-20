@@ -56,12 +56,9 @@ class TestCLIIntegration:
         assert result.returncode == 0
         assert "Prompt 'test-prompt' created successfully!" in result.stdout
 
-        # Verify files created
-        yaml_file = temp_env["prompts_dir"] / "test-prompt.yaml"
-        json_file = temp_env["prompts_dir"] / "test-prompt.json"
-        txt_file = temp_env["prompts_dir"] / "test-prompt.txt"
-        assert yaml_file.exists() or json_file.exists()  # Either format
-        assert txt_file.exists()
+        # Verify XML file created
+        xml_file = temp_env["prompts_dir"] / "test-prompt.xml"
+        assert xml_file.exists()
 
     def test_list_prompts_cli(self, temp_env):
         """Test listing prompts via CLI."""
@@ -94,21 +91,16 @@ class TestCLIIntegration:
         """Test deleting a prompt via CLI."""
         self.run_cli_command(["create", "delete-test", "Template to delete"], temp_env)
 
-        # Verify it exists (check both yaml and txt files)
-        yaml_file = temp_env["prompts_dir"] / "delete-test.yaml"
-        txt_file = temp_env["prompts_dir"] / "delete-test.txt"
-        assert (
-            yaml_file.exists()
-            or (temp_env["prompts_dir"] / "delete-test.json").exists()
-        )  # Could be either format
-        assert txt_file.exists()
+        # Verify it exists
+        xml_file = temp_env["prompts_dir"] / "delete-test.xml"
+        assert xml_file.exists()
 
         # Delete with force flag
         result = self.run_cli_command(["delete", "delete-test", "--force"], temp_env)
 
         assert result.returncode == 0
         assert "deleted successfully" in result.stdout
-        assert not yaml_file.exists()
+        assert not xml_file.exists()
 
     def test_create_collection_cli(self, temp_env):
         """Test creating collections via CLI."""
@@ -134,12 +126,11 @@ class TestCLIIntegration:
 
         assert result.returncode == 0
 
-        # Verify collection file exists
-        collection_file = (
-            temp_env["prompts_dir"] / "collections" / "test-collection.yaml"
-        )
-        json_file = temp_env["prompts_dir"] / "collections" / "test-collection.json"
-        assert collection_file.exists() or json_file.exists()
+        # Verify collection directory exists
+        collection_dir = temp_env["prompts_dir"] / "collections" / "test-collection"
+        metadata_file = collection_dir / ".collection.yaml"
+        assert collection_dir.exists() and collection_dir.is_dir()
+        assert metadata_file.exists()
 
     def test_config_cli(self, temp_env):
         """Test configuration management via CLI."""
@@ -220,19 +211,19 @@ class TestCLIIntegration:
         """Test creating prompts in both YAML and JSON formats."""
         # Test YAML
         result = self.run_cli_command(
-            ["create", "yaml-test", "YAML template", "--format", "yaml"], temp_env
+            ["create", "yaml-test", "YAML template"], temp_env
         )
 
         assert result.returncode == 0
-        assert (temp_env["prompts_dir"] / "yaml-test.yaml").exists()
+        assert (temp_env["prompts_dir"] / "yaml-test.xml").exists()
 
         # Test JSON
         result = self.run_cli_command(
-            ["create", "json-test", "JSON template", "--format", "json"], temp_env
+            ["create", "json-test", "JSON template"], temp_env
         )
 
         assert result.returncode == 0
-        assert (temp_env["prompts_dir"] / "json-test.json").exists()
+        assert (temp_env["prompts_dir"] / "json-test.xml").exists()
 
     def test_help_commands(self, temp_env):
         """Test help commands work correctly."""
@@ -261,17 +252,13 @@ class TestCLIIntegration:
 
         self.run_cli_command(["create", "prompt2", "Template 2"], temp_env)
 
-        # Create collection
+        # Create empty collection
         self.run_cli_command(
             [
                 "collection-create",
                 "workflow-collection",
                 "--description",
                 "Workflow test",
-                "--template",
-                "prompt1",
-                "--template",
-                "prompt2",
             ],
             temp_env,
         )
@@ -283,13 +270,12 @@ class TestCLIIntegration:
 
         assert result.returncode == 0
 
-        # List should show only collection templates
+        # In directory-based collections, templates need to be moved to the collection directory
+        # For now, we just verify that the collection is loaded and empty
         result = self.run_cli_command(["list"], temp_env)
 
         assert result.returncode == 0
-        assert (
-            "prompt1" in result.stdout or "prompt2" in result.stdout
-        )  # At least one should be visible
+        assert "No prompts found in collection" in result.stdout
 
         # Unload collection
         result = self.run_cli_command(["collection-unload"], temp_env)
