@@ -6,6 +6,14 @@
 
 - implement collections-only XML storage system
 
+## v (2025-07-21)
+
+## v0.18.0 (2025-07-21)
+
+### Refactor
+
+- implement collections-only XML storage system
+
 ## v0.17.0 (2025-07-20)
 
 ## v0.16.0 (2025-07-20)
