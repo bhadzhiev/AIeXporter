@@ -177,6 +177,17 @@ class Config:
     ) -> bool:
         """Add a custom provider configuration."""
         custom_providers = self.get_custom_providers()
+        
+        # For built-in providers, preserve their correct base URLs
+        built_in_urls = {
+            "openrouter": "https://openrouter.ai/api/v1",
+            "openai": "https://api.openai.com/v1", 
+            "anthropic": "https://api.anthropic.com"
+        }
+        
+        # If this is a built-in provider and an empty base_url was provided, use the correct one
+        if name in built_in_urls and not base_url:
+            base_url = built_in_urls[name]
 
         custom_providers[name] = {
             "base_url": base_url,
