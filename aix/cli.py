@@ -1376,6 +1376,66 @@ def collection_import(
         console.print(f"Import failed: {e}", style="red")
 
 
+@app.command("collection-import-repo")
+def collection_import_repo(
+    repo_url: str = typer.Argument(..., help="GitHub repository URL (e.g., https://github.com/user/repo.git)"),
+    collection_name: Optional[str] = typer.Option(
+        None, "--collection", "-c", help="Specific collection name to import (required if repo has multiple collections)"
+    ),
+    overwrite: bool = typer.Option(
+        False, "--overwrite", help="Overwrite existing collection and templates"
+    ),
+):
+    """Import a collection from a GitHub repository."""
+    console = Console()
+    manager = CollectionManager()
+
+    console.print(f"Importing collection from repository: {repo_url}", style="cyan")
+    
+    if collection_name:
+        console.print(f"Looking for collection: {collection_name}", style="dim")
+    
+    try:
+        result = manager.import_collection_from_repo(repo_url, collection_name, overwrite)
+
+        if result["success"]:
+            console.print(
+                f"Successfully imported collection '{result['collection_name']}'",
+                style="green",
+            )
+
+            if result["imported_templates"]:
+                console.print(
+                    f"Imported {len(result['imported_templates'])} templates:",
+                    style="green",
+                )
+                for template in result["imported_templates"]:
+                    console.print(f"  - {template}")
+
+            if result["skipped_templates"]:
+                console.print(
+                    f"Skipped {len(result['skipped_templates'])} existing templates:",
+                    style="yellow",
+                )
+                for template in result["skipped_templates"]:
+                    console.print(f"  - {template}")
+                console.print(
+                    "Use --overwrite to replace existing templates", style="dim"
+                )
+
+            console.print(
+                f"\nUse 'aix collection-load {result['collection_name']}' to work with this collection",
+                style="cyan",
+            )
+        else:
+            console.print("Import from repository failed:", style="red")
+            for error in result["errors"]:
+                console.print(f"  - {error}", style="red")
+
+    except Exception as e:
+        console.print(f"Repository import failed: {e}", style="red")
+
+
 # Provider management commands
 provider_app = typer.Typer(name="provider", help="Manage custom API providers")
 

@@ -127,6 +127,9 @@ aix collection-export webdev -o ~/backups/
 
 # Import shared collection
 aix collection-import ~/shared/frontend-bundle.tar.gz
+
+# Import collections from GitHub repositories
+aix collection-import-repo https://github.com/user/collections-repo.git
 ```
 
 ### Collection Features
@@ -134,7 +137,34 @@ aix collection-import ~/shared/frontend-bundle.tar.gz
 - **Context-Aware**: `list` and `run` commands work within collection scope
 - **Persistent State**: Current collection persists across sessions
 - **Portable**: Export/import collections as bundles
+- **GitHub Integration**: Import collections directly from public repositories
 - **Flexible**: Use `--all` flag to bypass collection filtering
+
+### Sharing Collections via GitHub
+
+Share your collections with the community or across teams using GitHub repositories:
+
+```bash
+# Import public collections (great for getting started!)
+aix collection-import-repo https://github.com/bhadzhiev/AIeXpoerterCollections.git
+
+# Import specific collection when repo has multiple
+aix collection-import-repo https://github.com/user/collections.git --collection web-dev
+
+# Overwrite existing collections during updates
+aix collection-import-repo https://github.com/user/collections.git --overwrite
+```
+
+**Repository Structure**: Create a public GitHub repo with this structure:
+```
+your-collections-repo/
+└── collections/
+    ├── web-dev.xml
+    ├── devops.xml
+    └── data-science.xml
+```
+
+Each XML file contains a complete collection with embedded templates, making sharing incredibly simple!
 
 ## Dynamic Placeholder Generators
 

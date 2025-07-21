@@ -2,11 +2,6 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Response Style
-- Provide concise, text-only responses
-- No images, borders, or decorative formatting
-- Use plain text for all output
-
 ## Project Overview
 
 **aix** (AI eXecutor) is a CLI tool for managing and executing AI prompts with dynamic variables, command execution, and multi-provider support.
@@ -59,6 +54,7 @@ aix run prompt-name --param key=value  # Streaming enabled by default
 aix run prompt-name --debug             # Show generated prompts and command outputs
 aix create prompt-name "template with {variables}"
 aix collection-create web-dev --template code-review
+aix collection-import-repo https://github.com/user/collections.git  # Import from GitHub
 ```
 
 ## Architecture

@@ -151,6 +151,24 @@ aix collection-import ~/backups/web-dev-bundle.tar.gz
 aix collection-import ~/backups/web-dev-bundle.tar.gz --overwrite
 ```
 
+### `aix collection-import-repo` - Import Collections from GitHub
+```bash
+# Import collection from public GitHub repository
+aix collection-import-repo https://github.com/user/collections-repo.git
+
+# Import specific collection by name (required if repo has multiple collections)
+aix collection-import-repo https://github.com/user/collections-repo.git --collection web-dev
+
+# Overwrite existing collections
+aix collection-import-repo https://github.com/user/collections-repo.git --overwrite
+
+# Import with both specific collection and overwrite
+aix collection-import-repo https://github.com/user/collections-repo.git --collection codecatalyst --overwrite
+
+# Example: Import AWS CodeCatalyst templates
+aix collection-import-repo https://github.com/bhadzhiev/AIeXpoerterCollections.git
+```
+
 ### Collection Management Commands
 ```bash
 # List all collections

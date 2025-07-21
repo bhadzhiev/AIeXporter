@@ -79,6 +79,7 @@ aix run roast --param language=python --param code="print('hello world')"
 | **📁 Collections-Only Storage** | XML-based template organization | Everything is organized, no loose files |
 | **⚡ Dynamic Templates** | `{variables}` + `$(commands)` | Your prompts can now read your system |
 | **📚 Template Collections** | Organize prompts into groups | Work with focused sets of templates |
+| **🌐 GitHub Integration** | Import collections from repos | Share collections with the community |
 | **🤖 Multi-AI Support** | OpenRouter, OpenAI, Anthropic | When one AI is down, use another |
 | **🔒 Safety First** | Allowlisted commands only | No `rm -rf /` accidents |
 | **🚀 Auto-upgrade** | Self-updating tool | Future-you will thank present-you |
@@ -247,6 +248,10 @@ aix list  # Shows only web-project prompts
 
 # When you need all prompts back
 aix collection-unload
+
+# Share your collections with the world (or import from others)
+aix collection-export web-project -o ~/sharing/
+aix collection-import-repo https://github.com/bhadzhiev/AIeXpoerterCollections.git
 ```
 
 ## Buy Me a Coffee

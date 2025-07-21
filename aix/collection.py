@@ -1008,3 +1008,97 @@ class CollectionManager:
             result["errors"].append(f"Import failed: {e}")
 
         return result
+
+    def import_collection_from_repo(
+        self, repo_url: str, collection_name: str = None, overwrite: bool = False
+    ) -> Dict[str, Any]:
+        """Import a collection from a GitHub repository."""
+        import subprocess
+        import tempfile
+        from urllib.parse import urlparse
+        
+        result = {
+            "success": False,
+            "collection_name": None,
+            "imported_templates": [],
+            "skipped_templates": [],
+            "errors": [],
+        }
+        
+        try:
+            # Parse the repository URL
+            parsed_url = urlparse(repo_url)
+            if not parsed_url.netloc or not parsed_url.path:
+                result["errors"].append("Invalid repository URL")
+                return result
+            
+            # Ensure it's a proper GitHub URL
+            if 'github.com' not in parsed_url.netloc:
+                result["errors"].append("Only GitHub repositories are supported")
+                return result
+            
+            # Create temporary directory for cloning
+            with tempfile.TemporaryDirectory() as temp_dir:
+                temp_path = Path(temp_dir)
+                repo_path = temp_path / "repo"
+                
+                # Clone the repository
+                try:
+                    subprocess.run([
+                        "git", "clone", "--depth", "1", repo_url, str(repo_path)
+                    ], check=True, capture_output=True, text=True)
+                except subprocess.CalledProcessError as e:
+                    result["errors"].append(f"Failed to clone repository: {e.stderr}")
+                    return result
+                except FileNotFoundError:
+                    result["errors"].append("git command not found. Please install Git")
+                    return result
+                
+                # Look for collections in the collections folder
+                collections_dir = repo_path / "collections"
+                if not collections_dir.exists():
+                    result["errors"].append("No 'collections' folder found in repository")
+                    return result
+                
+                # Find XML collection files
+                collection_files = list(collections_dir.glob("*.xml"))
+                if not collection_files:
+                    result["errors"].append("No XML collection files found in collections folder")
+                    return result
+                
+                # If collection_name is specified, try to find that specific collection
+                if collection_name:
+                    target_file = collections_dir / f"{collection_name}.xml"
+                    if target_file.exists():
+                        collection_files = [target_file]
+                    else:
+                        result["errors"].append(f"Collection '{collection_name}' not found in repository")
+                        return result
+                elif len(collection_files) > 1:
+                    # Multiple collections found, let user know
+                    available_collections = [f.stem for f in collection_files]
+                    result["errors"].append(
+                        f"Multiple collections found: {', '.join(available_collections)}. "
+                        "Please specify which collection to import using the collection name parameter"
+                    )
+                    return result
+                
+                # Import each collection file found
+                imported_any = False
+                for collection_file in collection_files:
+                    import_result = self.import_collection(collection_file, overwrite)
+                    
+                    if import_result["success"]:
+                        imported_any = True
+                        result["collection_name"] = import_result["collection_name"]
+                        result["imported_templates"].extend(import_result["imported_templates"])
+                        result["skipped_templates"].extend(import_result["skipped_templates"])
+                    else:
+                        result["errors"].extend(import_result["errors"])
+                
+                result["success"] = imported_any
+                
+        except Exception as e:
+            result["errors"].append(f"Unexpected error: {str(e)}")
+        
+        return result
