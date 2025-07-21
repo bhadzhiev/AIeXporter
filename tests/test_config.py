@@ -28,15 +28,12 @@ class TestConfig:
         actual_storage = config.get("storage_path")
         # Allow for both temp directory and home directory as valid defaults
         assert actual_storage in [expected_storage, str(Path.home() / ".prompts")]
-        assert config.get("default_format") == "xml"
         assert config.get("editor") == "nano"
 
     def test_get_config_value(self, temp_storage_dir):
         """Test getting configuration values."""
         config = Config(temp_storage_dir / "config.json")
 
-        assert config.get("auto_backup", True) is True
-        assert config.get("max_backups", 5) == 5
         assert config.get("nonexistent", "default") == "default"
 
     def test_set_config_value(self, temp_storage_dir):
@@ -117,12 +114,6 @@ class TestConfig:
         assert isinstance(storage_path, Path)
         assert storage_path.exists()
 
-    def test_get_default_format(self, temp_storage_dir):
-        """Test getting default format."""
-        config = Config(temp_storage_dir / "config.json")
-
-        format_name = config.get_default_format()
-        assert format_name == "xml"
 
     def test_get_default_model(self, temp_storage_dir):
         """Test getting default models for providers."""
@@ -163,17 +154,14 @@ class TestConfig:
 
         expected_keys = [
             "storage_path",
-            "default_format",
             "editor",
-            "auto_backup",
-            "max_backups",
             "default_provider",
-            "default_model",
-            "api_keys",
-            "streaming",
             "max_tokens",
             "temperature",
+            "auto_upgrade",
             "custom_providers",
+            "commands_enabled",
+            "disabled_commands",
         ]
 
         for key in expected_keys:

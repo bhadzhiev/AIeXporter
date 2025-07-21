@@ -55,6 +55,9 @@ aix api-key openai
 
 # Anthropic = Claude, also costs money
 aix api-key anthropic
+
+# Custom providers get stored with custom: prefix
+aix api-key custom:moonshot
 ```
 
 ### Step 3: Actually use it
@@ -213,7 +216,7 @@ aix provider add "custom-api" "https://my-api.example.com/v1" \
   --model "my-model" \
   --header "X-API-Key:secret"
 
-# Use custom provider
+# Use custom provider (note the custom: prefix)
 aix run my-prompt --provider custom:ollama --execute
 ```
 

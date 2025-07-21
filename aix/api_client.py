@@ -424,25 +424,43 @@ class AnthropicClient(BaseAPIClient):
 
 
 def get_client(
-    provider: str, api_key: str, custom_config: Dict[str, Any] = None
+    provider: str, api_key: str, custom_config: Optional[Dict[str, Any]] = None, config=None
 ) -> BaseAPIClient:
     """Factory function to get the appropriate API client."""
+    # Handle legacy custom: prefix by stripping it
+    if provider.startswith("custom:"):
+        provider = provider[7:]  # Remove "custom:" prefix
+    
+    # Check built-in providers first
     if provider == "openrouter":
-        # Use OpenAI client with OpenRouter endpoint
         return OpenAIClient(api_key, "https://openrouter.ai/api/v1")
     elif provider == "openai":
         return OpenAIClient(api_key)
     elif provider == "anthropic":
         return AnthropicClient(api_key)
-    elif provider == "custom":
-        if not custom_config:
-            raise ValueError("Custom provider requires configuration")
+    
+    # If not built-in, check custom providers
+    if custom_config:
+        # Direct custom config provided
         return CustomAPIClient(
             api_key=api_key,
             base_url=custom_config["base_url"],
             headers=custom_config.get("headers", {}),
-            provider_name=custom_config.get("name", "custom"),
+            provider_name=custom_config.get("name", provider),
             auth_type=custom_config.get("auth_type", "bearer"),
         )
-    else:
-        raise ValueError(f"Unsupported provider: {provider}")
+    
+    # Try to get custom provider from config if config object provided
+    if config:
+        custom_provider_config = config.get_custom_provider(provider)
+        if custom_provider_config:
+            return CustomAPIClient(
+                api_key=api_key,
+                base_url=custom_provider_config["base_url"],
+                headers=custom_provider_config.get("headers", {}),
+                provider_name=provider,
+                auth_type=custom_provider_config.get("auth_type", "bearer"),
+            )
+    
+    # Provider not found anywhere
+    raise ValueError(f"Unsupported provider: {provider}. Available built-in providers: openrouter, openai, anthropic")

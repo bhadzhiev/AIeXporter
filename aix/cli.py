@@ -611,25 +611,20 @@ def run(
             return
 
     try:
-        # Handle custom providers
-        custom_config = None
-        if selected_provider.startswith("custom:"):
-            provider_name = selected_provider[7:]  # Remove "custom:" prefix
-            custom_config = config.get_custom_provider(provider_name)
-            if not custom_config:
-                console.print(
-                    f"Custom provider '{provider_name}' not found", style="red"
-                )
-                console.print("Available custom providers:", style="yellow")
-                for name in config.get_custom_providers().keys():
-                    console.print(f"  custom:{name}", style="dim")
-                return
-            selected_provider = "custom"
-
-        client = get_client(selected_provider, api_key, custom_config)
+        # Use simplified provider system - get_client handles everything automatically
+        if not api_key:
+            console.print("No API key available", style="red")
+            return
+        client = get_client(selected_provider, api_key, config=config)
 
         # Get default model
-        if selected_provider == "custom" and custom_config:
+        # For custom providers, check if we can get config, otherwise use general config
+        actual_provider = selected_provider
+        if selected_provider.startswith("custom:"):
+            actual_provider = selected_provider[7:]
+        
+        custom_config = config.get_custom_provider(actual_provider)
+        if custom_config:
             selected_model = model or custom_config.get("default_model", "")
         else:
             selected_model = model or config.get_default_model(selected_provider)
@@ -1631,18 +1626,18 @@ def provider_add(
 
         # Set API key if provided
         if api_key:
-            config.set_api_key(f"custom:{name}", api_key)
+            config.set_api_key(name, api_key)
 
         # Success message
         console.print(
             f"✅ [bold green]Provider '{name}' configured successfully![/bold green]"
         )
         console.print("\n[bold]Usage:[/bold]")
-        console.print(f"  aix run <prompt> --provider custom:{name}")
+        console.print(f"  aix run <prompt> --provider {name}")
 
         if default_model:
             console.print(
-                f"  aix run <prompt> --provider custom:{name} --model {default_model}"
+                f"  aix run <prompt> --provider {name} --model {default_model}"
             )
 
         console.print("\n[bold]Management:[/bold]")
@@ -1725,7 +1720,7 @@ def provider_info(name: str = typer.Argument(..., help="Provider name")):
         if provider_data.get("api_key"):
             console.print("API Key: *** (configured)", style="green")
 
-        console.print(f"Usage: aix run <prompt> --provider custom:{name}", style="cyan")
+        console.print(f"Usage: aix run <prompt> --provider {name}", style="cyan")
 
     except Exception as e:
         console.print(f"Error getting provider info: {e}", style="red")
@@ -1861,18 +1856,18 @@ def provider_quick_setup():
             raise typer.Exit(1)
 
         if api_key:
-            config.set_api_key(f"custom:{name}", api_key)
+            config.set_api_key(name, api_key)
 
         # Success message
         console.print(
             f"✅ [bold green]Provider '{name}' configured successfully![/bold green]"
         )
         console.print("\n[bold]Usage:[/bold]")
-        console.print(f"  aix run <prompt> --provider custom:{name}")
+        console.print(f"  aix run <prompt> --provider {name}")
 
         if default_model:
             console.print(
-                f"  aix run <prompt> --provider custom:{name} --model {default_model}"
+                f"  aix run <prompt> --provider {name} --model {default_model}"
             )
 
     except KeyboardInterrupt:

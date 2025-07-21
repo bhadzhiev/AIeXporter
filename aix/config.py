@@ -25,14 +25,8 @@ class Config:
             # Create default config
             default_config = {
                 "storage_path": str(Path.home() / ".prompts"),
-                "default_format": "xml",
                 "editor": "nano",
-                "auto_backup": True,
-                "max_backups": 5,
                 "default_provider": "openrouter",
-                "default_model": "meta-llama/llama-3.2-3b-instruct:free",
-                "api_keys": {},
-                "streaming": False,
                 "max_tokens": 1024,
                 "temperature": 0.7,
                 "auto_upgrade": False,
@@ -45,10 +39,12 @@ class Config:
 
         try:
             with open(self.config_path, "r") as f:
-                return json.load(f)
+                config = json.load(f)
+                return config
         except Exception as e:
             print(f"Error loading config: {e}")
             return {}
+
 
     def _save_config(self, config: Dict[str, Any]) -> bool:
         """Save configuration to file."""
@@ -97,20 +93,61 @@ class Config:
         path_str = self.get("storage_path", str(Path.home() / ".prompts"))
         return Path(path_str)
 
-    def get_default_format(self) -> str:
-        """Get the default file format for new prompts."""
-        return self.get("default_format", "xml")
 
     def get_api_key(self, provider: str) -> Optional[str]:
         """Get API key for a specific provider."""
-        api_keys = self.get("api_keys", {})
-        return api_keys.get(provider)
+        # Handle custom providers - check if API key is stored in custom_providers
+        if provider.startswith("custom:"):
+            provider_name = provider[7:]  # Remove "custom:" prefix
+            custom_providers = self.get_custom_providers()
+            if provider_name in custom_providers:
+                custom_config = custom_providers[provider_name]
+                if "api_key" in custom_config and custom_config["api_key"]:
+                    return custom_config["api_key"]
+        else:
+            # For built-in providers, also check custom_providers
+            custom_providers = self.get_custom_providers()
+            if provider in custom_providers:
+                custom_config = custom_providers[provider]
+                if "api_key" in custom_config and custom_config["api_key"]:
+                    return custom_config["api_key"]
+        
+        return None
 
     def set_api_key(self, provider: str, api_key: str) -> bool:
         """Set API key for a specific provider."""
-        api_keys = self.get("api_keys", {})
-        api_keys[provider] = api_key
-        return self.set("api_keys", api_keys)
+        # Handle custom providers - store API key in custom_providers structure
+        if provider.startswith("custom:"):
+            provider_name = provider[7:]  # Remove "custom:" prefix
+            custom_providers = self.get_custom_providers()
+            if provider_name in custom_providers:
+                custom_providers[provider_name]["api_key"] = api_key
+                return self.set("custom_providers", custom_providers)
+            else:
+                # If custom provider doesn't exist, create it with minimal config
+                custom_providers[provider_name] = {
+                    "base_url": "",
+                    "default_model": None,
+                    "headers": {},
+                    "auth_type": "bearer",
+                    "api_key": api_key
+                }
+                return self.set("custom_providers", custom_providers)
+        else:
+            # For built-in providers, store in custom_providers structure
+            custom_providers = self.get_custom_providers()
+            if provider not in custom_providers:
+                # Create custom provider entry for built-in provider
+                custom_providers[provider] = {
+                    "base_url": "",
+                    "default_model": None,
+                    "headers": {},
+                    "auth_type": "bearer",
+                    "api_key": api_key
+                }
+            else:
+                custom_providers[provider]["api_key"] = api_key
+            return self.set("custom_providers", custom_providers)
 
     def get_default_provider(self) -> str:
         """Get the default API provider."""
@@ -119,11 +156,11 @@ class Config:
     def get_default_model(self, provider: str = None) -> str:
         """Get the default model for a provider."""
         if provider == "openai":
-            return self.get("openai_default_model", "gpt-3.5-turbo")
+            return "gpt-3.5-turbo"
         elif provider == "anthropic":
-            return self.get("anthropic_default_model", "claude-3-haiku-20240307")
+            return "claude-3-haiku-20240307"
         else:  # openrouter or others
-            return self.get("default_model", "meta-llama/llama-3.2-3b-instruct:free")
+            return "meta-llama/llama-3.2-3b-instruct:free"
 
     def get_custom_providers(self) -> Dict[str, Dict[str, Any]]:
         """Get all custom provider configurations."""
@@ -136,6 +173,7 @@ class Config:
         default_model: str = None,
         headers: Dict[str, str] = None,
         auth_type: str = "bearer",
+        api_key: str = None,
     ) -> bool:
         """Add a custom provider configuration."""
         custom_providers = self.get_custom_providers()
@@ -145,6 +183,7 @@ class Config:
             "default_model": default_model,
             "headers": headers or {},
             "auth_type": auth_type,
+            "api_key": api_key or "",
         }
 
         return self.set("custom_providers", custom_providers)

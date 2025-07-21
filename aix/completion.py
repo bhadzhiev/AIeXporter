@@ -136,20 +136,10 @@ def complete_config_keys(incomplete: str) -> List[str]:
     """Complete configuration key names."""
     keys = [
         "storage_path",
-        "default_format",
         "editor",
-        "auto_backup",
-        "max_backups",
         "default_provider",
-        "default_model",
-        "openai_default_model",
-        "anthropic_default_model",
-        "streaming",
         "max_tokens",
         "temperature",
-        "api_keys.openrouter",
-        "api_keys.openai",
-        "api_keys.anthropic",
     ]
 
     if incomplete:

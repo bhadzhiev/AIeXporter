@@ -218,7 +218,7 @@ Use local or custom AI models:
 # Add Ollama (local models)
 aix provider add ollama "http://localhost:11434/v1" --model "llama3.2"
 
-# Use custom provider
+# Use custom provider (note the custom: prefix)
 aix run my-prompt --provider custom:ollama
 
 # Add any OpenAI-compatible service
