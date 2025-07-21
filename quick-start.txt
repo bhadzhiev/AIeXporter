@@ -1,0 +1,41 @@
+ Quick Start Guide for aix on macOS
+
+  1. Install aix using uv
+
+  First, install uv if you don't have it:
+  curl -LsSf https://astral.sh/uv/install.sh | sh
+
+  Then install aix:
+  uv tool install aix --from git+https://github.com/bhadzhiev/AIeXporter.git
+
+  2. Set up OpenRouter API key
+
+  Get a free API key from https://openrouter.ai and configure it:
+  aix api-key openrouter
+  # Enter your API key when prompted
+
+  3. Set OpenRouter as default provider with model
+
+  aix config --set default_provider openrouter
+  aix provider add openrouter "https://openrouter.ai/api/v1" --model "microsoft/phi-3-mini-128k-instruct:free"
+
+  4. Import collections from GitHub
+
+  Add pre-built prompt collections:
+  aix collection-import-repo https://github.com/bhadzhiev/AIeXpoerterCollections.git
+
+  5. Run project analysis
+
+  Navigate to any project directory and run:
+  aix run project-info
+
+  Pro tip: Use aix list to see all available prompts from the imported collections.
+
+  Popular OpenRouter free models:
+
+  - meta-llama/llama-3.2-3b-instruct:free
+  - meta-llama/llama-3.2-1b-instruct:free
+  - mistralai/mistral-7b-instruct:free
+  - microsoft/phi-3-mini-128k-instruct:free
+
+  This flow ensures users set up everything properly upfront, then can simply run commands without specifying providers/models each time.
