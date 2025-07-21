@@ -163,23 +163,23 @@ class Config:
         """Get a specific custom provider configuration."""
         custom_providers = self.get_custom_providers()
         return custom_providers.get(name)
-        
+
     def get_commands_enabled(self) -> bool:
         """Get whether command execution is enabled by default."""
         return self.get("commands_enabled", True)
-        
+
     def set_commands_enabled(self, enabled: bool) -> bool:
         """Set whether command execution is enabled by default."""
         return self.set("commands_enabled", enabled)
-        
+
     def get_disabled_commands(self) -> list:
         """Get the list of disabled commands."""
         return self.get("disabled_commands", [])
-        
+
     def set_disabled_commands(self, commands: list) -> bool:
         """Set the list of disabled commands."""
         return self.set("disabled_commands", commands)
-        
+
     def add_disabled_command(self, command: str) -> bool:
         """Add a command to the disabled list."""
         disabled = self.get_disabled_commands()
@@ -187,7 +187,7 @@ class Config:
             disabled.append(command)
             return self.set_disabled_commands(disabled)
         return True
-        
+
     def remove_disabled_command(self, command: str) -> bool:
         """Remove a command from the disabled list."""
         disabled = self.get_disabled_commands()

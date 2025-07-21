@@ -178,5 +178,3 @@ def complete_tags(incomplete: str) -> List[str]:
         return tags
     except Exception:
         return []
-
-

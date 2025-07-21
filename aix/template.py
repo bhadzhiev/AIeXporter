@@ -73,24 +73,27 @@ class PromptTemplate:
         """
         # Start with the provided variables
         all_variables = dict(variables)
-        
+
         # Execute placeholder generators if enabled
         if execute_generators and self.placeholder_generators:
             try:
                 from .placeholder_generator import PlaceholderExecutor
+
                 executor = PlaceholderExecutor()
-                generated_placeholders = executor.execute_generators(self.placeholder_generators)
-                
+                generated_placeholders = executor.execute_generators(
+                    self.placeholder_generators
+                )
+
                 # Merge generated placeholders with provided variables
                 # Provided variables take precedence over generated ones
                 for key, value in generated_placeholders.items():
                     if key not in all_variables:
                         all_variables[key] = value
-                        
+
             except Exception as e:
                 # Log warning but continue with template rendering
                 print(f"Warning: Placeholder generation failed: {e}")
-        
+
         if execute_commands and command_executor:
             # Use command executor to process template with commands
             result, command_outputs = command_executor.process_template(
@@ -124,7 +127,7 @@ class PromptTemplate:
     def from_dict(cls, data: Dict) -> "PromptTemplate":
         """Create instance from dictionary."""
         # Handle placeholder_generators conversion
-        generators_data = data.get('placeholder_generators', [])
+        generators_data = data.get("placeholder_generators", [])
         if generators_data:
             generators = []
             for gen_data in generators_data:
@@ -133,35 +136,35 @@ class PromptTemplate:
                 elif isinstance(gen_data, PlaceholderGenerator):
                     generators.append(gen_data)
             data = dict(data)  # Make a copy
-            data['placeholder_generators'] = generators
-        
+            data["placeholder_generators"] = generators
+
         return cls(**data)
 
     def to_xml(self) -> str:
         """Convert to XML format."""
         root = ET.Element("template")
-        
+
         # Metadata section
         metadata = ET.SubElement(root, "metadata")
-        
+
         # Basic fields
         ET.SubElement(metadata, "name").text = self.name
         ET.SubElement(metadata, "description").text = self.description or ""
         ET.SubElement(metadata, "created_at").text = self.created_at or ""
         ET.SubElement(metadata, "updated_at").text = self.updated_at or ""
-        
+
         # Tags
         if self.tags:
             tags_elem = ET.SubElement(metadata, "tags")
             for tag in self.tags:
                 ET.SubElement(tags_elem, "tag").text = tag
-        
+
         # Variables
         if self.variables:
             variables_elem = ET.SubElement(metadata, "variables")
             for var in self.variables:
                 ET.SubElement(variables_elem, "variable").text = var
-        
+
         # Placeholder generators
         if self.placeholder_generators:
             generators_elem = ET.SubElement(metadata, "placeholder_generators")
@@ -169,26 +172,28 @@ class PromptTemplate:
                 gen_elem = ET.SubElement(generators_elem, "placeholder_generator")
                 gen_elem.set("language", generator.language)
                 gen_elem.text = f"PLACEHOLDER_GENERATOR_CDATA_{generator.language}"
-        
+
         # Content section - will be replaced with CDATA manually
         content = ET.SubElement(root, "content")
         content.text = "PLACEHOLDER_FOR_CDATA"
-        
+
         # Format XML string with pretty printing
         ET.indent(root, space="  ", level=0)
-        xml_string = '<?xml version="1.0" encoding="utf-8"?>\n' + ET.tostring(root, encoding='unicode')
-        
+        xml_string = '<?xml version="1.0" encoding="utf-8"?>\n' + ET.tostring(
+            root, encoding="unicode"
+        )
+
         # Replace placeholder with CDATA section
         cdata_content = f"<![CDATA[{self.template}]]>"
         xml_string = xml_string.replace("PLACEHOLDER_FOR_CDATA", cdata_content)
-        
+
         # Replace placeholder generator CDATA sections
         if self.placeholder_generators:
             for generator in self.placeholder_generators:
                 placeholder = f"PLACEHOLDER_GENERATOR_CDATA_{generator.language}"
                 cdata_script = f"<![CDATA[{generator.script}]]>"
                 xml_string = xml_string.replace(placeholder, cdata_script)
-        
+
         return xml_string
 
     @classmethod
@@ -196,24 +201,24 @@ class PromptTemplate:
         """Create instance from XML content."""
         try:
             root = ET.fromstring(xml_content)
-            
+
             # Extract metadata
             metadata = root.find("metadata")
             if metadata is None:
                 raise ValueError("Invalid XML: missing metadata section")
-            
+
             name = metadata.find("name")
             name = name.text if name is not None else ""
-            
+
             description = metadata.find("description")
             description = description.text if description is not None else ""
-            
+
             created_at = metadata.find("created_at")
             created_at = created_at.text if created_at is not None else None
-            
+
             updated_at = metadata.find("updated_at")
             updated_at = updated_at.text if updated_at is not None else None
-            
+
             # Extract tags
             tags = []
             tags_elem = metadata.find("tags")
@@ -221,7 +226,7 @@ class PromptTemplate:
                 for tag_elem in tags_elem.findall("tag"):
                     if tag_elem.text:
                         tags.append(tag_elem.text)
-            
+
             # Extract variables
             variables = []
             variables_elem = metadata.find("variables")
@@ -229,7 +234,7 @@ class PromptTemplate:
                 for var_elem in variables_elem.findall("variable"):
                     if var_elem.text:
                         variables.append(var_elem.text)
-            
+
             # Extract placeholder generators
             placeholder_generators = []
             generators_elem = metadata.find("placeholder_generators")
@@ -238,8 +243,10 @@ class PromptTemplate:
                     language = gen_elem.get("language", "")
                     script = gen_elem.text or ""
                     if language and script:
-                        placeholder_generators.append(PlaceholderGenerator(language=language, script=script))
-            
+                        placeholder_generators.append(
+                            PlaceholderGenerator(language=language, script=script)
+                        )
+
             # Extract content (handle both CDATA and regular text)
             content_elem = root.find("content")
             if content_elem is not None:
@@ -252,14 +259,19 @@ class PromptTemplate:
                     template = ""
                     # Find the content section in the raw XML
                     import re
-                    content_match = re.search(r'<content><!\[CDATA\[(.*?)\]\]></content>', xml_content, re.DOTALL)
+
+                    content_match = re.search(
+                        r"<content><!\[CDATA\[(.*?)\]\]></content>",
+                        xml_content,
+                        re.DOTALL,
+                    )
                     if content_match:
                         template = content_match.group(1)
                     elif content_elem.text:
                         template = content_elem.text
             else:
                 template = ""
-            
+
             return cls(
                 name=name,
                 template=template,
@@ -268,9 +280,9 @@ class PromptTemplate:
                 variables=variables,
                 placeholder_generators=placeholder_generators,
                 created_at=created_at,
-                updated_at=updated_at
+                updated_at=updated_at,
             )
-            
+
         except ET.ParseError as e:
             raise ValueError(f"Invalid XML format: {e}")
         except Exception as e:

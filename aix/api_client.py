@@ -242,7 +242,7 @@ class CustomAPIClient(BaseAPIClient):
     def generate(self, prompt: str, model: str = None, **kwargs) -> APIResponse:
         # Build authentication header based on auth_type
         auth_headers = self._get_auth_headers()
-        
+
         headers = {
             "Content-Type": "application/json",
             **auth_headers,
@@ -301,7 +301,7 @@ class CustomAPIClient(BaseAPIClient):
     ) -> Generator[str, None, None]:
         # Build authentication header based on auth_type
         auth_headers = self._get_auth_headers()
-        
+
         headers = {
             "Content-Type": "application/json",
             **auth_headers,

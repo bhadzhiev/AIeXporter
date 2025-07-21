@@ -100,7 +100,7 @@ class TestCLIIntegration:
 
         assert result.returncode == 0
         assert "deleted successfully" in result.stdout
-        
+
         # Verify template no longer exists (check via CLI list command)
         list_result = self.run_cli_command(["list"], temp_env)
         assert "delete-test" not in list_result.stdout
@@ -211,9 +211,7 @@ class TestCLIIntegration:
     def test_xml_format(self, temp_env):
         """Test creating prompts in XML format."""
         # Test XML template creation
-        result = self.run_cli_command(
-            ["create", "xml-test", "XML template"], temp_env
-        )
+        result = self.run_cli_command(["create", "xml-test", "XML template"], temp_env)
 
         assert result.returncode == 0
         # Verify template exists in default collection XML

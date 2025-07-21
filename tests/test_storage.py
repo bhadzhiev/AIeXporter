@@ -40,7 +40,9 @@ class TestPromptStorage:
         assert retrieved.description == sample_template["description"]
         assert retrieved.tags == sample_template["tags"]
 
-    def test_save_and_get_prompt_with_collection(self, temp_storage_dir, sample_template):
+    def test_save_and_get_prompt_with_collection(
+        self, temp_storage_dir, sample_template
+    ):
         """Test saving and retrieving a prompt in a collection."""
         storage = PromptStorage(temp_storage_dir)
 

@@ -76,48 +76,51 @@ class CollectionStorage:
         # File to track the currently loaded collection
         self.current_collection_file = self.storage_path / ".current_collection"
 
-    
     def save_collection(self, collection: Collection) -> bool:
         """Save a collection to XML format."""
         return self.save_collection_to_xml(collection)
-    
-    def save_collection_with_template(self, collection: Collection, new_template: 'PromptTemplate') -> bool:
+
+    def save_collection_with_template(
+        self, collection: Collection, new_template: "PromptTemplate"
+    ) -> bool:
         """Save a collection to XML format with a new template to embed."""
         return self.save_collection_to_xml(collection, new_template)
 
-    def save_collection_to_xml(self, collection: Collection, new_template: 'PromptTemplate' = None) -> bool:
+    def save_collection_to_xml(
+        self, collection: Collection, new_template: "PromptTemplate" = None
+    ) -> bool:
         """Save a collection to a single XML file with embedded templates."""
         try:
             xml_path = self.collections_path / f"{collection.name}.xml"
-            
+
             # Create root element
             root = ET.Element("collection")
-            
+
             # Add metadata
             metadata = ET.SubElement(root, "metadata")
             ET.SubElement(metadata, "name").text = collection.name
             ET.SubElement(metadata, "description").text = collection.description or ""
-            
+
             if collection.system_prompt:
                 ET.SubElement(metadata, "system_prompt").text = collection.system_prompt
-            
+
             # Add tags
             if collection.tags:
                 tags_elem = ET.SubElement(metadata, "tags")
                 for tag in collection.tags:
                     ET.SubElement(tags_elem, "tag").text = tag
-            
+
             ET.SubElement(metadata, "author").text = collection.author or ""
             ET.SubElement(metadata, "created_at").text = collection.created_at
             ET.SubElement(metadata, "updated_at").text = collection.updated_at
-            
+
             # Add templates section
             templates_elem = ET.SubElement(root, "templates")
-            
+
             # Load and embed each template
             template_idx = 0
             cdata_replacements = []
-            
+
             for template_name in collection.templates:
                 # Use new_template if it matches, otherwise load from collections
                 if new_template and new_template.name == template_name:
@@ -126,65 +129,83 @@ class CollectionStorage:
                     template = self._load_template_for_collection(template_name)
                 if template:
                     template_elem = ET.SubElement(templates_elem, "template")
-                    
+
                     # Template metadata
                     tmpl_metadata = ET.SubElement(template_elem, "metadata")
                     ET.SubElement(tmpl_metadata, "name").text = template.name
-                    ET.SubElement(tmpl_metadata, "description").text = template.description or ""
-                    ET.SubElement(tmpl_metadata, "created_at").text = template.created_at
-                    ET.SubElement(tmpl_metadata, "updated_at").text = template.updated_at
-                    
+                    ET.SubElement(tmpl_metadata, "description").text = (
+                        template.description or ""
+                    )
+                    ET.SubElement(
+                        tmpl_metadata, "created_at"
+                    ).text = template.created_at
+                    ET.SubElement(
+                        tmpl_metadata, "updated_at"
+                    ).text = template.updated_at
+
                     # Add tags if present
                     if template.tags:
                         tags_elem = ET.SubElement(tmpl_metadata, "tags")
                         for tag in template.tags:
                             ET.SubElement(tags_elem, "tag").text = tag
-                    
+
                     # Add variables if present
                     if template.variables:
                         variables_elem = ET.SubElement(tmpl_metadata, "variables")
                         for var in template.variables:
                             ET.SubElement(variables_elem, "variable").text = var
-                    
+
                     # Placeholder generators
                     if template.placeholder_generators:
-                        generators_elem = ET.SubElement(tmpl_metadata, "placeholder_generators")
-                        for gen_idx, generator in enumerate(template.placeholder_generators):
-                            gen_elem = ET.SubElement(generators_elem, "placeholder_generator")
+                        generators_elem = ET.SubElement(
+                            tmpl_metadata, "placeholder_generators"
+                        )
+                        for gen_idx, generator in enumerate(
+                            template.placeholder_generators
+                        ):
+                            gen_elem = ET.SubElement(
+                                generators_elem, "placeholder_generator"
+                            )
                             gen_elem.set("language", generator.language)
                             placeholder = f"PLACEHOLDER_GENERATOR_CDATA_{generator.language}_{template_idx}_{gen_idx}"
                             gen_elem.text = placeholder
-                            cdata_replacements.append((placeholder, f"<![CDATA[{generator.script}]]>"))
-                    
+                            cdata_replacements.append(
+                                (placeholder, f"<![CDATA[{generator.script}]]>")
+                            )
+
                     # Template content with CDATA
                     content_elem = ET.SubElement(template_elem, "content")
                     content_placeholder = f"PLACEHOLDER_FOR_CDATA_{template_idx}"
                     content_elem.text = content_placeholder
-                    cdata_replacements.append((content_placeholder, f"<![CDATA[{template.template}]]>"))
-                    
+                    cdata_replacements.append(
+                        (content_placeholder, f"<![CDATA[{template.template}]]>")
+                    )
+
                     template_idx += 1
-            
+
             # Convert to string and replace placeholders with CDATA
             ET.indent(root, space="  ", level=0)
             xml_string = ET.tostring(root, encoding="unicode")
-            
+
             # Add XML declaration
             xml_string = '<?xml version="1.0" encoding="utf-8"?>\n' + xml_string
-            
+
             # Replace all CDATA placeholders
             for placeholder, cdata_content in cdata_replacements:
                 xml_string = xml_string.replace(placeholder, cdata_content)
-            
+
             # Write to file
             with open(xml_path, "w", encoding="utf-8") as f:
                 f.write(xml_string)
-            
+
             return True
         except Exception as e:
             print(f"Error saving collection to XML: {e}")
             return False
 
-    def _load_template_for_collection(self, template_name: str) -> Optional[PromptTemplate]:
+    def _load_template_for_collection(
+        self, template_name: str
+    ) -> Optional[PromptTemplate]:
         """Load a template from any collection for embedding in another collection."""
         # Search all collections for the template
         for collection_xml in self.collections_path.glob("*.xml"):
@@ -192,7 +213,7 @@ class CollectionStorage:
             template = self.get_xml_collection_template(collection_name, template_name)
             if template:
                 return template
-        
+
         # If not found, return None - template will need to be created
         return None
 
@@ -209,17 +230,19 @@ class CollectionStorage:
                 for xml_file in collection_dir.glob("*.xml"):
                     template_name = xml_file.stem
                     discovered_templates.append(template_name)
-                
+
                 # Use discovered templates as the authoritative list for directory-based collections
                 # This ensures consistency with actual file system state
                 all_templates = discovered_templates
                 if all_templates != xml_collection.templates:
                     xml_collection.templates = all_templates
-                    xml_collection.updated_at = __import__('datetime').datetime.now().isoformat()
+                    xml_collection.updated_at = (
+                        __import__("datetime").datetime.now().isoformat()
+                    )
                     self.save_collection(xml_collection)
-            
+
             return xml_collection
-            
+
         # For backward compatibility, check for directory-based collection
         collection_dir = self.collections_path / name
         if collection_dir.exists() and collection_dir.is_dir():
@@ -227,10 +250,11 @@ class CollectionStorage:
             templates = []
             for xml_file in collection_dir.glob("*.xml"):
                 templates.append(xml_file.stem)
-            
+
             if templates:
                 # Create a collection with discovered templates
                 from datetime import datetime
+
                 collection = Collection(
                     name=name,
                     description="",
@@ -239,7 +263,7 @@ class CollectionStorage:
                     updated_at=datetime.now().isoformat(),
                 )
                 return collection
-                
+
         return None
 
     def get_collection_from_xml(self, name: str) -> Optional[Collection]:
@@ -247,19 +271,19 @@ class CollectionStorage:
         xml_path = self.collections_path / f"{name}.xml"
         if not xml_path.exists():
             return None
-        
+
         try:
             tree = ET.parse(xml_path)
             root = tree.getroot()
-            
+
             if root.tag != "collection":
                 return None
-            
+
             # Parse metadata
             metadata = root.find("metadata")
             if metadata is None:
                 return None
-            
+
             collection_data = {
                 "name": metadata.findtext("name", name),
                 "description": metadata.findtext("description", ""),
@@ -268,14 +292,16 @@ class CollectionStorage:
                 "created_at": metadata.findtext("created_at", ""),
                 "updated_at": metadata.findtext("updated_at", ""),
                 "tags": [],
-                "templates": []
+                "templates": [],
             }
-            
+
             # Parse tags
             tags_elem = metadata.find("tags")
             if tags_elem is not None:
-                collection_data["tags"] = [tag.text for tag in tags_elem.findall("tag") if tag.text]
-            
+                collection_data["tags"] = [
+                    tag.text for tag in tags_elem.findall("tag") if tag.text
+                ]
+
             # Parse template names from embedded templates
             templates_elem = root.find("templates")
             if templates_elem is not None:
@@ -285,9 +311,9 @@ class CollectionStorage:
                         template_name = template_metadata.findtext("name")
                         if template_name:
                             collection_data["templates"].append(template_name)
-            
+
             return Collection.from_dict(collection_data)
-            
+
         except Exception as e:
             print(f"Error loading collection from XML {xml_path}: {e}")
             return None
@@ -302,33 +328,34 @@ class CollectionStorage:
             collection = self.get_collection_from_xml(name)
             if collection:
                 collections.append(collection)
-        
+
         # Also check for legacy directory-based collections and convert them
         self._migrate_legacy_collections()
 
         return sorted(collections, key=lambda c: c.name)
-    
+
     def _migrate_legacy_collections(self) -> None:
         """Migrate any legacy directory-based collections to XML format."""
         if not self.collections_path.exists():
             return
-        
+
         for collection_dir in self.collections_path.glob("*"):
             if collection_dir.is_dir():
                 collection_name = collection_dir.name
                 xml_path = self.collections_path / f"{collection_name}.xml"
-                
+
                 # Skip if XML already exists
                 if xml_path.exists():
                     continue
-                
+
                 # Create collection from directory
                 templates = []
                 for xml_file in collection_dir.glob("*.xml"):
                     templates.append(xml_file.stem)
-                
+
                 if templates:
                     from datetime import datetime
+
                     collection = Collection(
                         name=collection_name,
                         description="Migrated from directory-based collection",
@@ -336,7 +363,7 @@ class CollectionStorage:
                         created_at=datetime.now().isoformat(),
                         updated_at=datetime.now().isoformat(),
                     )
-                    
+
                     # Save as XML collection
                     if self.save_collection_to_xml(collection):
                         print(f"Migrated collection '{collection_name}' to XML format")
@@ -403,16 +430,18 @@ class CollectionStorage:
             print(f"Error clearing current collection: {e}")
             return False
 
-    def get_xml_collection_template(self, collection_name: str, template_name: str) -> Optional[PromptTemplate]:
+    def get_xml_collection_template(
+        self, collection_name: str, template_name: str
+    ) -> Optional[PromptTemplate]:
         """Get a specific template from an XML collection."""
         xml_path = self.collections_path / f"{collection_name}.xml"
         if not xml_path.exists():
             return None
-        
+
         try:
             tree = ET.parse(xml_path)
             root = tree.getroot()
-            
+
             # Find the template in the XML
             templates_elem = root.find("templates")
             if templates_elem is not None:
@@ -424,48 +453,67 @@ class CollectionStorage:
                             # Parse template data
                             template_data = {
                                 "name": name,
-                                "description": template_metadata.findtext("description", ""),
-                                "created_at": template_metadata.findtext("created_at", ""),
-                                "updated_at": template_metadata.findtext("updated_at", ""),
+                                "description": template_metadata.findtext(
+                                    "description", ""
+                                ),
+                                "created_at": template_metadata.findtext(
+                                    "created_at", ""
+                                ),
+                                "updated_at": template_metadata.findtext(
+                                    "updated_at", ""
+                                ),
                                 "template": "",
                                 "tags": [],
                                 "variables": [],
-                                "placeholder_generators": []
+                                "placeholder_generators": [],
                             }
-                            
+
                             # Parse tags
                             tags_elem = template_metadata.find("tags")
                             if tags_elem is not None:
-                                template_data["tags"] = [tag.text for tag in tags_elem.findall("tag") if tag.text]
-                            
+                                template_data["tags"] = [
+                                    tag.text
+                                    for tag in tags_elem.findall("tag")
+                                    if tag.text
+                                ]
+
                             # Parse variables
                             variables_elem = template_metadata.find("variables")
                             if variables_elem is not None:
-                                template_data["variables"] = [var.text for var in variables_elem.findall("variable") if var.text]
-                            
+                                template_data["variables"] = [
+                                    var.text
+                                    for var in variables_elem.findall("variable")
+                                    if var.text
+                                ]
+
                             # Parse placeholder generators
-                            generators_elem = template_metadata.find("placeholder_generators")
+                            generators_elem = template_metadata.find(
+                                "placeholder_generators"
+                            )
                             if generators_elem is not None:
-                                for gen_elem in generators_elem.findall("placeholder_generator"):
+                                for gen_elem in generators_elem.findall(
+                                    "placeholder_generator"
+                                ):
                                     language = gen_elem.get("language", "")
                                     script = gen_elem.text or ""
                                     if language and script:
-                                        template_data["placeholder_generators"].append({
-                                            "language": language,
-                                            "script": script
-                                        })
-                            
+                                        template_data["placeholder_generators"].append(
+                                            {"language": language, "script": script}
+                                        )
+
                             # Get content (handle CDATA)
                             content_elem = template_elem.find("content")
                             if content_elem is not None and content_elem.text:
                                 template_data["template"] = content_elem.text
-                            
+
                             return PromptTemplate.from_dict(template_data)
-            
+
             return None
-            
+
         except Exception as e:
-            print(f"Error loading template {template_name} from XML collection {collection_name}: {e}")
+            print(
+                f"Error loading template {template_name} from XML collection {collection_name}: {e}"
+            )
             return None
 
     def get_collection_templates(
@@ -477,16 +525,18 @@ class CollectionStorage:
             return []
 
         templates = []
-        
+
         # Check if this is an XML collection
         xml_path = self.collections_path / f"{collection_name}.xml"
         if xml_path.exists():
             # Load templates directly from XML collection
             for template_name in collection.templates:
-                template = self.get_xml_collection_template(collection_name, template_name)
+                template = self.get_xml_collection_template(
+                    collection_name, template_name
+                )
                 if template:
                     templates.append(template)
-        
+
         return templates
 
     def validate_collection_templates(
@@ -510,11 +560,13 @@ class CollectionStorage:
                 for xml_file in collection_dir.glob("*.xml"):
                     template_name = xml_file.stem
                     discovered_templates.append(template_name)
-                
+
                 # Update collection with discovered templates
                 if discovered_templates:
                     collection.templates = discovered_templates
-                    collection.updated_at = __import__('datetime').datetime.now().isoformat()
+                    collection.updated_at = (
+                        __import__("datetime").datetime.now().isoformat()
+                    )
                     self.save_collection(collection)
 
         for template_name in collection.templates:
@@ -561,40 +613,49 @@ class CollectionManager:
         )
 
         return self.collection_storage.save_collection(collection)
-    
-    def add_template_to_collection(self, collection_name: str, template: 'PromptTemplate') -> bool:
+
+    def add_template_to_collection(
+        self, collection_name: str, template: "PromptTemplate"
+    ) -> bool:
         """Add a template to a collection."""
         collection = self.collection_storage.get_collection(collection_name)
         if not collection:
             # Create collection if it doesn't exist
             from datetime import datetime
+
             collection = Collection(
                 name=collection_name,
                 description="",
                 templates=[],
                 created_at=datetime.now().isoformat(),
-                updated_at=datetime.now().isoformat()
+                updated_at=datetime.now().isoformat(),
             )
-        
+
         if collection.add_template(template.name):
             from datetime import datetime
+
             collection.updated_at = datetime.now().isoformat()
             # Save with the template object for embedding
-            return self.collection_storage.save_collection_with_template(collection, template)
+            return self.collection_storage.save_collection_with_template(
+                collection, template
+            )
         return False
-    
-    def remove_template_from_collection(self, collection_name: str, template_name: str) -> bool:
+
+    def remove_template_from_collection(
+        self, collection_name: str, template_name: str
+    ) -> bool:
         """Remove a template from a collection."""
         collection = self.collection_storage.get_collection(collection_name)
         if not collection:
             return False
-        
+
         if collection.remove_template(template_name):
             from datetime import datetime
+
             collection.updated_at = datetime.now().isoformat()
             return self.collection_storage.save_collection(collection)
         return False
-    
+
     def get_template_collection(self, template_name: str) -> Optional[str]:
         """Find which collection contains the given template."""
         for collection_xml in self.collections_path.glob("*.xml"):
@@ -609,12 +670,13 @@ class CollectionManager:
         if self.collection_storage.collection_exists(name):
             return self.collection_storage.set_current_collection(name)
         return False
-    
+
     def get_default_collection(self) -> str:
         """Get the default collection name."""
         from .storage import PromptStorage
+
         return PromptStorage.DEFAULT_COLLECTION
-    
+
     def ensure_collection_exists(self, name: str, description: str = "") -> bool:
         """Ensure a collection exists, creating it if necessary."""
         if not self.collection_storage.collection_exists(name):
@@ -710,17 +772,19 @@ class CollectionManager:
 
         export_path = Path(export_path)
         export_path.mkdir(parents=True, exist_ok=True)
-        
+
         # Create bundle file name
         bundle_file = export_path / f"{collection_name}-bundle.tar.gz"
-        
+
         try:
             with tarfile.open(bundle_file, "w:gz") as tar:
                 # Add collection XML file
-                xml_path = self.collection_storage.collections_path / f"{collection_name}.xml"
+                xml_path = (
+                    self.collection_storage.collections_path / f"{collection_name}.xml"
+                )
                 if xml_path.exists():
                     tar.add(xml_path, arcname=f"{collection_name}.xml")
-                
+
                 # Create manifest
                 manifest = {
                     "collection_name": collection_name,
@@ -729,35 +793,55 @@ class CollectionManager:
                     "include_templates": include_templates,
                     "templates": collection.templates,
                 }
-                
+
                 # Add manifest as JSON
-                with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+                with tempfile.NamedTemporaryFile(
+                    mode="w", suffix=".json", delete=False
+                ) as f:
                     json.dump(manifest, f, indent=2)
                     manifest_path = Path(f.name)
-                
+
                 tar.add(manifest_path, arcname="manifest.json")
                 manifest_path.unlink()
-                
+
                 # Include template files if requested
                 if include_templates:
                     for template_name in collection.templates:
                         template = self.prompt_storage.get_prompt(template_name)
                         if template:
                             # Add template metadata (YAML/JSON)
-                            metadata_path = self.prompt_storage.storage_path / f"{template_name}.yaml"
+                            metadata_path = (
+                                self.prompt_storage.storage_path
+                                / f"{template_name}.yaml"
+                            )
                             if metadata_path.exists():
-                                tar.add(metadata_path, arcname=f"templates/{template_name}.yaml")
+                                tar.add(
+                                    metadata_path,
+                                    arcname=f"templates/{template_name}.yaml",
+                                )
                             else:
                                 # Try JSON format
-                                metadata_path = self.prompt_storage.storage_path / f"{template_name}.json"
+                                metadata_path = (
+                                    self.prompt_storage.storage_path
+                                    / f"{template_name}.json"
+                                )
                                 if metadata_path.exists():
-                                    tar.add(metadata_path, arcname=f"templates/{template_name}.json")
-                            
+                                    tar.add(
+                                        metadata_path,
+                                        arcname=f"templates/{template_name}.json",
+                                    )
+
                             # Add template content
-                            content_path = self.prompt_storage.storage_path / f"{template_name}.txt"
+                            content_path = (
+                                self.prompt_storage.storage_path
+                                / f"{template_name}.txt"
+                            )
                             if content_path.exists():
-                                tar.add(content_path, arcname=f"templates/{template_name}.txt")
-            
+                                tar.add(
+                                    content_path,
+                                    arcname=f"templates/{template_name}.txt",
+                                )
+
             return True
         except Exception as e:
             print(f"Error exporting collection: {e}")
@@ -788,95 +872,126 @@ class CollectionManager:
                     # Extract to temporary directory
                     with tempfile.TemporaryDirectory() as temp_dir:
                         temp_path = Path(temp_dir)
-                        tar.extractall(temp_path, filter='data')  # Use filter for security
-                        
+                        tar.extractall(
+                            temp_path, filter="data"
+                        )  # Use filter for security
+
                         # Read manifest
                         manifest_path = temp_path / "manifest.json"
                         if not manifest_path.exists():
                             result["errors"].append("Invalid bundle: missing manifest")
                             return result
-                        
+
                         with open(manifest_path) as f:
                             manifest = json.load(f)
-                        
+
                         collection_name = manifest["collection_name"]
                         result["collection_name"] = collection_name
-                        
+
                         # Check if collection exists
-                        if self.collection_storage.collection_exists(collection_name) and not overwrite:
+                        if (
+                            self.collection_storage.collection_exists(collection_name)
+                            and not overwrite
+                        ):
                             result["errors"].append(
                                 f"Collection '{collection_name}' already exists (use --overwrite)"
                             )
                             return result
-                        
+
                         # Import collection XML
                         xml_path = temp_path / f"{collection_name}.xml"
                         if xml_path.exists():
-                            dest_xml_path = self.collection_storage.collections_path / f"{collection_name}.xml"
+                            dest_xml_path = (
+                                self.collection_storage.collections_path
+                                / f"{collection_name}.xml"
+                            )
                             shutil.copy2(xml_path, dest_xml_path)
-                        
+
                         # Import templates if they exist in bundle
                         templates_dir = temp_path / "templates"
                         if templates_dir.exists():
                             for template_file in templates_dir.glob("*.yaml"):
                                 template_name = template_file.stem
-                                
+
                                 # Skip if template already exists and not overwriting
-                                if self.prompt_storage.prompt_exists(template_name) and not overwrite:
+                                if (
+                                    self.prompt_storage.prompt_exists(template_name)
+                                    and not overwrite
+                                ):
                                     result["skipped_templates"].append(template_name)
                                     continue
-                                
+
                                 # Import template metadata
-                                dest_metadata_path = self.prompt_storage.storage_path / f"{template_name}.yaml"
+                                dest_metadata_path = (
+                                    self.prompt_storage.storage_path
+                                    / f"{template_name}.yaml"
+                                )
                                 shutil.copy2(template_file, dest_metadata_path)
-                                
+
                                 # Import template content
                                 content_file = templates_dir / f"{template_name}.txt"
                                 if content_file.exists():
-                                    dest_content_path = self.prompt_storage.storage_path / f"{template_name}.txt"
+                                    dest_content_path = (
+                                        self.prompt_storage.storage_path
+                                        / f"{template_name}.txt"
+                                    )
                                     shutil.copy2(content_file, dest_content_path)
-                                
+
                                 result["imported_templates"].append(template_name)
-                            
+
                             # Also check for JSON files
                             for template_file in templates_dir.glob("*.json"):
                                 template_name = template_file.stem
-                                
+
                                 # Skip if template already exists and not overwriting
-                                if self.prompt_storage.prompt_exists(template_name) and not overwrite:
+                                if (
+                                    self.prompt_storage.prompt_exists(template_name)
+                                    and not overwrite
+                                ):
                                     result["skipped_templates"].append(template_name)
                                     continue
-                                
+
                                 # Import template metadata
-                                dest_metadata_path = self.prompt_storage.storage_path / f"{template_name}.json"
+                                dest_metadata_path = (
+                                    self.prompt_storage.storage_path
+                                    / f"{template_name}.json"
+                                )
                                 shutil.copy2(template_file, dest_metadata_path)
-                                
+
                                 # Import template content
                                 content_file = templates_dir / f"{template_name}.txt"
                                 if content_file.exists():
-                                    dest_content_path = self.prompt_storage.storage_path / f"{template_name}.txt"
+                                    dest_content_path = (
+                                        self.prompt_storage.storage_path
+                                        / f"{template_name}.txt"
+                                    )
                                     shutil.copy2(content_file, dest_content_path)
-                                
+
                                 result["imported_templates"].append(template_name)
-                        
+
                         result["success"] = True
-                        
+
             elif import_path.suffix == ".xml":
                 # Handle legacy XML import
                 collection_name = import_path.stem
                 result["collection_name"] = collection_name
 
                 # Check if collection exists
-                if self.collection_storage.collection_exists(collection_name) and not overwrite:
+                if (
+                    self.collection_storage.collection_exists(collection_name)
+                    and not overwrite
+                ):
                     result["errors"].append(
                         f"Collection '{collection_name}' already exists (use --overwrite)"
                     )
                     return result
 
                 # Copy XML file to collections directory
-                dest_path = self.collection_storage.collections_path / f"{collection_name}.xml"
+                dest_path = (
+                    self.collection_storage.collections_path / f"{collection_name}.xml"
+                )
                 shutil.copy2(import_path, dest_path)
-                
+
                 # Load collection to get template names for result
                 collection = self.collection_storage.get_collection(collection_name)
                 if collection:
@@ -885,11 +1000,11 @@ class CollectionManager:
                 else:
                     result["errors"].append("Failed to load imported collection")
             else:
-                result["errors"].append("Only .tar.gz bundles and .xml files are supported for import")
+                result["errors"].append(
+                    "Only .tar.gz bundles and .xml files are supported for import"
+                )
 
         except Exception as e:
             result["errors"].append(f"Import failed: {e}")
 
         return result
-
-

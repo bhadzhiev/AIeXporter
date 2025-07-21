@@ -16,7 +16,7 @@ class TestCommandExecutor:
     def test_initialization_with_custom_settings(self, temp_dir):
         """Test executor initialization with custom settings."""
         from aix.commands import DefaultSecurityValidator
-        
+
         custom_disabled = ["rm", "sudo", "dangerous-cmd"]
         security_validator = DefaultSecurityValidator(disabled_commands=custom_disabled)
         executor = CommandExecutor(
@@ -29,7 +29,7 @@ class TestCommandExecutor:
     def test_is_command_allowed_allowed(self):
         """Test allowed command detection."""
         from aix.commands import DefaultSecurityValidator
-        
+
         security_validator = DefaultSecurityValidator(disabled_commands=["rm", "sudo"])
         executor = CommandExecutor(security_validator=security_validator)
 
@@ -41,8 +41,10 @@ class TestCommandExecutor:
     def test_is_command_allowed_not_allowed(self):
         """Test disallowed command detection."""
         from aix.commands import DefaultSecurityValidator
-        
-        security_validator = DefaultSecurityValidator(disabled_commands=["rm", "sudo", "dangerous"])
+
+        security_validator = DefaultSecurityValidator(
+            disabled_commands=["rm", "sudo", "dangerous"]
+        )
         executor = CommandExecutor(security_validator=security_validator)
 
         assert executor.is_command_allowed("rm -rf /") is False
@@ -53,7 +55,7 @@ class TestCommandExecutor:
     def test_execute_allowed_command(self):
         """Test executing an allowed command."""
         from aix.commands import DefaultSecurityValidator
-        
+
         security_validator = DefaultSecurityValidator(disabled_commands=["rm", "sudo"])
         executor = CommandExecutor(security_validator=security_validator)
 
@@ -66,9 +68,11 @@ class TestCommandExecutor:
     def test_execute_command_in_working_dir(self, temp_dir):
         """Test command execution in specific working directory."""
         from aix.commands import DefaultSecurityValidator
-        
+
         security_validator = DefaultSecurityValidator(disabled_commands=["rm"])
-        executor = CommandExecutor(security_validator=security_validator, working_dir=temp_dir)
+        executor = CommandExecutor(
+            security_validator=security_validator, working_dir=temp_dir
+        )
 
         success, stdout, stderr = executor.execute("pwd")
 
@@ -78,7 +82,7 @@ class TestCommandExecutor:
     def test_execute_disallowed_command(self):
         """Test executing a disallowed command."""
         from aix.commands import DefaultSecurityValidator
-        
+
         security_validator = DefaultSecurityValidator(disabled_commands=["rm"])
         executor = CommandExecutor(security_validator=security_validator)
 
@@ -91,7 +95,7 @@ class TestCommandExecutor:
     def test_execute_command_timeout(self):
         """Test command timeout functionality."""
         from aix.commands import DefaultSecurityValidator
-        
+
         security_validator = DefaultSecurityValidator(disabled_commands=["rm"])
         executor = CommandExecutor(security_validator=security_validator, timeout=1)
 
@@ -102,13 +106,10 @@ class TestCommandExecutor:
         assert stdout == ""
         assert "timed out after 1 seconds" in stderr
 
-
-
-
     def test_invalid_command_syntax(self):
         """Test handling of invalid command syntax."""
         from aix.commands import DefaultSecurityValidator
-        
+
         security_validator = DefaultSecurityValidator()
         executor = CommandExecutor(security_validator=security_validator)
 
@@ -121,7 +122,7 @@ class TestCommandExecutor:
     def test_command_with_spaces(self):
         """Test commands with spaces and arguments."""
         from aix.commands import DefaultSecurityValidator
-        
+
         security_validator = DefaultSecurityValidator(disabled_commands=["rm"])
         executor = CommandExecutor(security_validator=security_validator)
 
@@ -133,7 +134,7 @@ class TestCommandExecutor:
     def test_empty_command(self):
         """Test handling of empty commands."""
         from aix.commands import DefaultSecurityValidator
-        
+
         security_validator = DefaultSecurityValidator()
         executor = CommandExecutor(security_validator=security_validator)
 

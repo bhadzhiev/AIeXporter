@@ -6,9 +6,9 @@ from .template import PromptTemplate
 
 class PromptStorage:
     """Collections-only storage system. All templates are stored within collections."""
-    
+
     DEFAULT_COLLECTION = "default"
-    
+
     def __init__(self, storage_path: Optional[Path] = None):
         """Initialize storage with custom path or default ~/.prompts"""
         if storage_path:
@@ -23,16 +23,15 @@ class PromptStorage:
         self.storage_path.mkdir(exist_ok=True)
         self.collections_path = self.storage_path / "collections"
         self.collections_path.mkdir(exist_ok=True)
-        
+
         # Ensure default collection exists
         self._ensure_default_collection()
-
 
     def _ensure_default_collection(self):
         """Ensure the default collection exists for ungrouped templates."""
         from .collection import CollectionStorage, Collection
         from datetime import datetime
-        
+
         collection_storage = CollectionStorage(self.storage_path)
         if not collection_storage.collection_exists(self.DEFAULT_COLLECTION):
             default_collection = Collection(
@@ -40,15 +39,16 @@ class PromptStorage:
                 description="Default collection for ungrouped templates",
                 templates=[],
                 created_at=datetime.now().isoformat(),
-                updated_at=datetime.now().isoformat()
+                updated_at=datetime.now().isoformat(),
             )
             collection_storage.save_collection(default_collection)
-    
+
     def _get_collection_for_template(self, template_name: str) -> Optional[str]:
         """Find which collection contains the given template."""
         from .collection import CollectionStorage
+
         collection_storage = CollectionStorage(self.storage_path)
-        
+
         # Check all collections for the template
         for collection_xml in self.collections_path.glob("*.xml"):
             collection_name = collection_xml.stem
@@ -66,24 +66,27 @@ class PromptStorage:
         try:
             # Use default collection if none specified
             target_collection = collection or self.DEFAULT_COLLECTION
-            
+
             # Remove from any existing collection first
             existing_collection = self._get_collection_for_template(prompt.name)
             if existing_collection and existing_collection != target_collection:
                 self.delete_prompt(prompt.name)
-            
+
             from .collection import CollectionManager
+
             manager = CollectionManager(self.storage_path)
-            
+
             # Ensure target collection exists
             manager.ensure_collection_exists(
-                target_collection, 
-                "Default collection for ungrouped templates" if target_collection == self.DEFAULT_COLLECTION else ""
+                target_collection,
+                "Default collection for ungrouped templates"
+                if target_collection == self.DEFAULT_COLLECTION
+                else "",
             )
-            
+
             # Add template to collection (this will save it as an embedded template)
             return manager.add_template_to_collection(target_collection, prompt)
-            
+
         except Exception as e:
             print(f"Error saving XML prompt: {e}")
             return False
@@ -93,7 +96,7 @@ class PromptStorage:
         # If collection is specified, try to get from that collection
         if collection:
             return self._get_prompt_from_collection_xml(name, collection)
-        
+
         # Search all collections for the template
         if self.collections_path.exists():
             for collection_xml in self.collections_path.glob("*.xml"):
@@ -101,19 +104,21 @@ class PromptStorage:
                 prompt = self._get_prompt_from_collection_xml(name, collection_name)
                 if prompt:
                     return prompt
-        
+
         return None
 
-    def _get_prompt_from_collection_xml(self, name: str, collection: str) -> Optional[PromptTemplate]:
+    def _get_prompt_from_collection_xml(
+        self, name: str, collection: str
+    ) -> Optional[PromptTemplate]:
         """Load a prompt template from collection XML file."""
         try:
             from .collection import CollectionStorage
+
             collection_storage = CollectionStorage(self.storage_path)
             return collection_storage.get_xml_collection_template(collection, name)
         except Exception as e:
             print(f"Error loading prompt {name} from collection {collection}: {e}")
             return None
-
 
     def list_prompts(self) -> List[PromptTemplate]:
         """List all available prompt templates from collections."""
@@ -123,8 +128,9 @@ class PromptStorage:
         # Check all collections for templates
         if self.collections_path.exists():
             from .collection import CollectionStorage
+
             collection_storage = CollectionStorage(self.storage_path)
-            
+
             for collection_xml in self.collections_path.glob("*.xml"):
                 collection_name = collection_xml.stem
                 collection = collection_storage.get_collection(collection_name)
@@ -133,8 +139,10 @@ class PromptStorage:
                         if template_name in seen_names:
                             continue
                         seen_names.add(template_name)
-                        
-                        prompt = self._get_prompt_from_collection_xml(template_name, collection_name)
+
+                        prompt = self._get_prompt_from_collection_xml(
+                            template_name, collection_name
+                        )
                         if prompt:
                             prompts.append(prompt)
 
@@ -146,10 +154,13 @@ class PromptStorage:
             # Delete from specific collection
             try:
                 from .collection import CollectionManager
+
                 manager = CollectionManager(self.storage_path)
                 return manager.remove_template_from_collection(collection, name)
             except Exception as e:
-                print(f"Error deleting template {name} from collection {collection}: {e}")
+                print(
+                    f"Error deleting template {name} from collection {collection}: {e}"
+                )
                 return False
         else:
             # Find and remove from any collection
@@ -157,11 +168,16 @@ class PromptStorage:
             if target_collection:
                 try:
                     from .collection import CollectionManager
+
                     manager = CollectionManager(self.storage_path)
-                    return manager.remove_template_from_collection(target_collection, name)
+                    return manager.remove_template_from_collection(
+                        target_collection, name
+                    )
                 except Exception as e:
-                    print(f"Error deleting template {name} from collection {target_collection}: {e}")
-            
+                    print(
+                        f"Error deleting template {name} from collection {target_collection}: {e}"
+                    )
+
             return False
 
     def prompt_exists(self, name: str, collection: str = None) -> bool:
@@ -181,11 +197,11 @@ class PromptStorage:
     def get_storage_info(self) -> Dict[str, Any]:
         """Get information about the storage location and contents."""
         prompts = self.list_prompts()
-        
+
         # Calculate total size of collection XML files
         total_size = 0
         collections_count = 0
-        
+
         # Collections directory XML files only
         if self.collections_path.exists():
             for f in self.collections_path.glob("*.xml"):

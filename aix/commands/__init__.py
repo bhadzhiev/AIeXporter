@@ -5,13 +5,13 @@ from .cli import test_cmd, show_commands, template_test
 
 __all__ = [
     "Command",
-    "SecurityValidator", 
+    "SecurityValidator",
     "DefaultSecurityValidator",
     "CompositeSecurityValidator",
     "CommandExecutor",
-    "ShellCommand", 
+    "ShellCommand",
     "IntelligentShellCommand",
     "test_cmd",
-    "show_commands", 
+    "show_commands",
     "template_test",
 ]

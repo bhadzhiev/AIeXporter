@@ -15,10 +15,13 @@ def test_cmd(
 ):
     """Test a command to see if it's allowed and get its output."""
     from ..config import Config
+
     config = Config()
-    
+
     disabled_commands = config.get_disabled_commands()
-    security_validator = DefaultSecurityValidator(disabled_commands=disabled_commands or None)
+    security_validator = DefaultSecurityValidator(
+        disabled_commands=disabled_commands or None
+    )
     executor = CommandExecutor(security_validator=security_validator, timeout=timeout)
 
     # Check if command is allowed
@@ -49,22 +52,31 @@ def test_cmd(
 def show_commands():
     """Show command execution status and disabled commands."""
     from ..config import Config
+
     config = Config()
-    
+
     disabled_commands = config.get_disabled_commands()
     commands_enabled = config.get_commands_enabled()
 
     console.print("Command Execution Status", style="bold cyan")
-    console.print(f"Commands enabled globally: {commands_enabled}", style="green" if commands_enabled else "red")
-    
+    console.print(
+        f"Commands enabled globally: {commands_enabled}",
+        style="green" if commands_enabled else "red",
+    )
+
     if disabled_commands:
         console.print("\nDisabled Commands:", style="bold red")
         for cmd in disabled_commands:
             console.print(f"  {cmd}: Security restriction")
     else:
-        console.print("\nNo additional disabled commands (using default security list)", style="dim")
-        
-    console.print("\n[dim]Note: Commands are enabled by default but restricted by security patterns[/dim]")
+        console.print(
+            "\nNo additional disabled commands (using default security list)",
+            style="dim",
+        )
+
+    console.print(
+        "\n[dim]Note: Commands are enabled by default but restricted by security patterns[/dim]"
+    )
 
 
 def template_test(
@@ -75,10 +87,13 @@ def template_test(
 ):
     """Test a template with command execution."""
     from ..config import Config
+
     config = Config()
-    
+
     disabled_commands = config.get_disabled_commands()
-    security_validator = DefaultSecurityValidator(disabled_commands=disabled_commands or None)
+    security_validator = DefaultSecurityValidator(
+        disabled_commands=disabled_commands or None
+    )
     executor = CommandExecutor(security_validator=security_validator)
 
     # Parse variables
@@ -93,25 +108,30 @@ def template_test(
     console.print("Template:")
     console.print(template)
 
-    console.print("\n[dim]Note: Template processing functionality has been moved to the template module[/dim]")
+    console.print(
+        "\n[dim]Note: Template processing functionality has been moved to the template module[/dim]"
+    )
     console.print("Current template testing is limited to command validation.")
-    
+
     # For now, just validate any commands in the template
     import re
-    commands = re.findall(r'\$\([^)]+\)|\{cmd:[^}]+\}|\{exec:[^}]+\}', template)
+
+    commands = re.findall(r"\$\([^)]+\)|\{cmd:[^}]+\}|\{exec:[^}]+\}", template)
     if commands:
         console.print("Found commands:", style="yellow")
         for cmd_placeholder in commands:
-            cmd = cmd_placeholder.strip('$(){}').replace('cmd:', '').replace('exec:', '')
+            cmd = (
+                cmd_placeholder.strip("$(){}").replace("cmd:", "").replace("exec:", "")
+            )
             if executor.is_command_allowed(cmd):
                 console.print(f"  {cmd_placeholder} → {cmd} [green]✓[/green]")
             else:
                 console.print(f"  {cmd_placeholder} → {cmd} [red]✗[/red]")
-    
+
     # Show template with variables substituted (basic)
     result = template
     for key, value in variables.items():
         result = result.replace(f"{{{key}}}", value)
-    
+
     console.print("\nTemplate with variables:")
     console.print(result)

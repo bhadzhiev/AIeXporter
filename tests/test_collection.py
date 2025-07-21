@@ -120,7 +120,7 @@ class TestCollectionStorage:
         """Test saving collection and adding actual template files."""
         from aix.storage import PromptStorage
         from aix.template import PromptTemplate
-        
+
         collection_storage = CollectionStorage(temp_storage_dir)
         prompt_storage = PromptStorage(temp_storage_dir)
 
