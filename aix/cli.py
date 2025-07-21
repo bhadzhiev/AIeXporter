@@ -699,7 +699,7 @@ def run(
         console.print(f"🤖 Model Error: {e.message}", style="red")
         console.print(f"💡 Try: aix run {name} --model <different-model>", style="yellow")
         if e.provider == "openrouter":
-            console.print("💡 Popular models: meta-llama/llama-3.2-3b-instruct, mistralai/mistral-7b-instruct", style="yellow")
+            console.print("💡 Try free model: microsoft/mai-ds-r1:free", style="yellow")
         
     except RateLimitError as e:
         console.print(f"⏰ Rate Limit: {e.message}", style="red")

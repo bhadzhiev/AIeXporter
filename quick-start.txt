@@ -14,12 +14,12 @@ uv tool install aix --from git+https://github.com/bhadzhiev/AIeXporter.git
 
 ## 2. Set up API provider
 
-**Option A: OpenRouter (requires credits but has many models)**
+**Option A: OpenRouter (free tier available)**
 ```bash
 # Get API key from https://openrouter.ai
 aix api-key openrouter
 aix config --set default_provider=openrouter
-aix config --set custom_providers.openrouter.default_model="meta-llama/llama-3.2-3b-instruct"
+aix config --set custom_providers.openrouter.default_model="microsoft/mai-ds-r1:free"
 ```
 
 **Option B: OpenAI (paid but reliable)**  
@@ -52,4 +52,4 @@ aix run project-info
 
 **Pro tip:** Use `aix list` to see all available prompts from the imported collections.
 
-**Note:** While OpenRouter offers many models, free tier availability varies. For guaranteed availability, consider OpenAI or Anthropic with credits.
+**Note:** The `microsoft/mai-ds-r1:free` model is available on OpenRouter's free tier. For more models or guaranteed availability, consider OpenAI or Anthropic with credits.

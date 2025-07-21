@@ -54,7 +54,7 @@ class OpenRouterClient(BaseAPIClient):
     def generate(
         self,
         prompt: str,
-        model: str = "meta-llama/llama-3.2-3b-instruct:free",
+        model: str = "microsoft/mai-ds-r1:free",
         **kwargs,
     ) -> APIResponse:
         headers = {
@@ -92,7 +92,7 @@ class OpenRouterClient(BaseAPIClient):
     def stream_generate(
         self,
         prompt: str,
-        model: str = "meta-llama/llama-3.2-3b-instruct:free",
+        model: str = "microsoft/mai-ds-r1:free",
         **kwargs,
     ) -> Generator[str, None, None]:
         headers = {

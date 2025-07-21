@@ -160,7 +160,7 @@ class Config:
         elif provider == "anthropic":
             return "claude-3-haiku-20240307"
         else:  # openrouter or others
-            return "meta-llama/llama-3.2-3b-instruct:free"
+            return "microsoft/mai-ds-r1:free"
 
     def get_custom_providers(self) -> Dict[str, Dict[str, Any]]:
         """Get all custom provider configurations."""
