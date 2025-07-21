@@ -5,6 +5,8 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import Enum
 
+from .exceptions import parse_api_error
+
 
 class Provider(Enum):
     OPENROUTER = "openrouter"
@@ -71,7 +73,9 @@ class OpenRouterClient(BaseAPIClient):
         response = self.client.post(
             f"{self.base_url}/chat/completions", headers=headers, json=data
         )
-        response.raise_for_status()
+        
+        if not response.is_success:
+            raise parse_api_error(response, "openrouter")
 
         result = response.json()
         content = result["choices"][0]["message"]["content"]
@@ -108,7 +112,8 @@ class OpenRouterClient(BaseAPIClient):
         with self.client.stream(
             "POST", f"{self.base_url}/chat/completions", headers=headers, json=data
         ) as response:
-            response.raise_for_status()
+            if not response.is_success:
+                raise parse_api_error(response, "openrouter")
             for line in response.iter_lines():
                 if line.startswith("data: "):
                     data_str = line[6:]

@@ -17,6 +17,10 @@ from .commands.executor import CommandExecutor
 from .commands.security import DefaultSecurityValidator
 from .collection import CollectionManager
 from .commands import test_cmd, show_commands, template_test
+from .exceptions import (
+    AIXError, APIError, AuthenticationError, InsufficientCreditsError,
+    ModelNotFoundError, RateLimitError, InvalidRequestError, ProviderError
+)
 from . import __version__
 from .completion import (
     complete_prompt_names,
@@ -683,8 +687,39 @@ def run(
 
         client.close()
 
+    except AuthenticationError as e:
+        console.print(f"❌ Authentication Error: {e.message}", style="red")
+        console.print(f"💡 Try: aix api-key {e.provider}", style="yellow")
+        
+    except InsufficientCreditsError as e:
+        console.print(f"💳 Insufficient Credits: {e.message}", style="red")
+        console.print(f"💡 Add credits to your {e.provider} account or try a different provider", style="yellow")
+        
+    except ModelNotFoundError as e:
+        console.print(f"🤖 Model Error: {e.message}", style="red")
+        console.print(f"💡 Try: aix run {name} --model <different-model>", style="yellow")
+        if e.provider == "openrouter":
+            console.print("💡 Popular models: meta-llama/llama-3.2-3b-instruct, mistralai/mistral-7b-instruct", style="yellow")
+        
+    except RateLimitError as e:
+        console.print(f"⏰ Rate Limit: {e.message}", style="red")
+        console.print("💡 Wait a moment and try again", style="yellow")
+        
+    except InvalidRequestError as e:
+        console.print(f"❌ Invalid Request: {e.message}", style="red")
+        console.print("💡 Check your parameters and try again", style="yellow")
+        
+    except ProviderError as e:
+        console.print(f"🚫 Provider Error: {e.message}", style="red")
+        console.print("💡 Try again later or use a different provider", style="yellow")
+        
+    except APIError as e:
+        console.print(f"🔌 API Error: {e.message}", style="red")
+        console.print(f"💡 Provider: {e.provider}, Status: {e.status_code}", style="yellow")
+        
     except Exception as e:
-        console.print(f"API Error: {str(e)}", style="red")
+        console.print(f"💥 Unexpected Error: {str(e)}", style="red")
+        console.print("💡 This might be a bug. Please report it!", style="yellow")
 
 
 @app.command()
