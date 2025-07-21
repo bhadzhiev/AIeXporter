@@ -51,7 +51,8 @@
       "Bash(cp:*)",
       "Bash(make:*)",
       "Bash(curl:*)",
-      "Bash(uv build:*)"
+      "Bash(uv build:*)",
+      "Bash(git rev-parse:*)"
     ],
     "deny": []
   }

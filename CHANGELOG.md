@@ -8,6 +8,14 @@
 
 ## v (2025-07-21)
 
+## v (2025-07-21)
+
+### Feat
+
+- add GitHub repository import for collections
+
+## v0.19.0 (2025-07-21)
+
 ## v0.18.0 (2025-07-21)
 
 ### Refactor

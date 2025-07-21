@@ -200,7 +200,7 @@ Templates are now stored embedded within XML collection files in `~/.prompts/col
 Templates can include placeholder generators that execute scripts to provide real-time values:
 
 ### Python Generators
-```xmltest 
+```xml
 <template>
   <metadata>
     <name>project-analysis</name>
@@ -208,6 +208,7 @@ Templates can include placeholder generators that execute scripts to provide rea
       <placeholder_generator language="python"><![CDATA[
 import glob
 import os
+import sys
 placeholders = {
     "file_count": str(len(glob.glob("**/*.py", recursive=True))),
     "project_name": os.getcwd().split("/")[-1],
@@ -291,63 +292,157 @@ System Report - {timestamp}
 - **Timeout Protection**: 30-second execution limit
 - **Error Handling**: Graceful fallback on failure
 
-## Template Examples
+## Template Examples (XML Collections)
+
+Templates are now stored in XML collections with embedded content. Here are examples showing the XML structure:
 
 ### 1. Git Commit Message Generator
 
-```yaml
-# commit-msg.yaml
-name: commit-msg
-template: |
-  Generate a concise git commit message for these changes:
-  
-  {exec:git diff --cached}
-  
-  Format: <type>: <description>
-  Types: feat, fix, docs, style, refactor, test, chore
-variables: []
+```xml
+<template>
+  <metadata>
+    <name>commit-msg</name>
+    <description>Generate git commit messages from staged changes</description>
+    <variables />
+    <tags>
+      <tag>git</tag>
+      <tag>development</tag>
+    </tags>
+  </metadata>
+  <content><![CDATA[
+Generate a concise git commit message for these changes:
+
+{exec:git diff --cached}
+
+Format: <type>: <description>
+Types: feat, fix, docs, style, refactor, test, chore
+  ]]></content>
+</template>
 ```
 
-### 2. Code Documentation
+### 2. Code Documentation (Language Specific)
 
-```yaml
-# doc-code.yaml
-name: doc-code
-template: |
-  Document this {language} function:
-  
-  ```{language}
-  {code}
-  ```
-  
-  Include:
-  - Purpose
-  - Parameters
-  - Return value
-  - Examples
-variables:
-  - language
-  - code
+```xml
+<template>
+  <metadata>
+    <name>doc-code</name>
+    <description>Generate documentation for code functions</description>
+    <variables>
+      <variable>language</variable>
+      <variable>code</variable>
+    </variables>
+    <tags>
+      <tag>documentation</tag>
+      <tag>code-review</tag>
+    </tags>
+  </metadata>
+  <content><![CDATA[
+Document this {language} function:
+
+```{language}
+{code}
 ```
 
-### 3. Meeting Summary
+Include:
+- Purpose
+- Parameters
+- Return value
+- Examples
+  ]]></content>
+</template>
+```
 
-```yaml
-# meeting-summary.yaml
-name: meeting-summary
-template: |
-  Create a meeting summary:
-  
-  **Meeting**: {meeting_title}
-  **Date**: {exec:date +%Y-%m-%d}
-  **Attendees**: {attendees}
-  
-  **Transcript**:
-  {transcript}
-  
-  **Summary**:
-variables:
-  - meeting_title
-  - attendees
-  - transcript
+### 3. Python Project Analysis
+
+```xml
+<template>
+  <metadata>
+    <name>analyze-python</name>
+    <description>Analyze Python project structure and dependencies</description>
+    <variables>
+      <variable>project_path</variable>
+    </variables>
+    <tags>
+      <tag>python</tag>
+      <tag>analysis</tag>
+    </tags>
+  </metadata>
+  <content><![CDATA[
+Analyze this Python project located at {project_path}:
+
+Project Structure:
+{exec:find {project_path} -name "*.py" -type f | head -10}
+
+Dependencies:
+{exec:cd {project_path} && grep -h "^import\|^from" **/*.py | sort -u | head -10}
+
+File Count:
+{exec:find {project_path} -name "*.py" | wc -l} Python files
+
+Main Entry Point:
+{exec:find {project_path} -name "main.py" -o -name "__main__.py" | head -1}
+  ]]></content>
+</template>
+```
+
+### 4. Bash Script Analysis
+
+```xml
+<template>
+  <metadata>
+    <name>analyze-bash</name>
+    <description>Analyze bash scripts for security and best practices</description>
+    <variables>
+      <variable>script_path</variable>
+    </variables>
+    <tags>
+      <tag>bash</tag>
+      <tag>security</tag>
+    </tags>
+  </metadata>
+  <content><![CDATA[
+Analyze this bash script: {script_path}
+
+Script content:
+```bash
+{exec:cat {script_path}}
+```
+
+Permissions: {exec:ls -la {script_path} | awk '{print $1}'}
+Shebang: {exec:head -1 {script_path}}
+Line count: {exec:wc -l < {script_path}}
+  ]]></content>
+</template>
+```
+
+### 5. Meeting Summary
+
+```xml
+<template>
+  <metadata>
+    <name>meeting-summary</name>
+    <description>Generate structured meeting summaries</description>
+    <variables>
+      <variable>meeting_title</variable>
+      <variable>attendees</variable>
+      <variable>transcript</variable>
+    </variables>
+    <tags>
+      <tag>meeting</tag>
+      <tag>summary</tag>
+    </tags>
+  </metadata>
+  <content><![CDATA[
+Create a meeting summary:
+
+**Meeting**: {meeting_title}
+**Date**: {exec:date +%Y-%m-%d}
+**Attendees**: {attendees}
+
+**Transcript**:
+{transcript}
+
+**Summary**:
+  ]]></content>
+</template>
 ```
