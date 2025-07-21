@@ -2,7 +2,7 @@
 
 > *AI eXecutor (aix) - Your AI butler that lives in the terminal and doesn't judge your code*
 
-[![Python](https://img.shields.io/badge/Python-3.8%2B-blue.svg)](https://www.python.org/downloads/)
+[![Python](https://img.shields.io/badge/Python-3.12%2B-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![AI](https://img.shields.io/badge/Powered%20by-AI%20(Obviously)-ff69b4.svg)](https://en.wikipedia.org/wiki/Artificial_intelligence)
 
@@ -20,13 +20,13 @@ Because typing the same prompts into ChatGPT over and over is so 2023. Now you c
 
 ```bash
 # Instead of copy-pasting into a browser...
-aix run code-review --param code="def add(a,b): return a+b" --execute
+aix run code-review --param code="def add(a,b): return a+b"  # Streaming enabled by default!
 
 # Instead of manually writing commit messages...
-aix run commit-msg --enable-commands --execute
+aix run commit-msg  # Commands enabled by default!
 
 # Instead of explaining your code to rubber ducks...
-aix run explain-code --param file="main.py" --execute
+aix run explain-code --param file="main.py" --debug  # Show what's happening under the hood
 ```
 
 ## Quick Start (a.k.a. "I have 5 minutes")
@@ -66,21 +66,23 @@ aix create roast "Roast this {language} code mercilessly:\n{code}"
 # Run it (dry run first because we're cowards)
 aix run roast --param language=python --param code="print('hello world')" --dry-run
 
-# Run it for real (brace yourself)
-aix run roast --param language=python --param code="print('hello world')" --execute
+# Run it for real (brace yourself) - streaming is default now!
+aix run roast --param language=python --param code="print('hello world')"
 ```
 
 ## Features that will make you go "Ooooh" ✨
 
 | Feature | Description | Why it's cool |
 |---------|-------------|---------------|
-| ** Dynamic Templates** | `{variables}` + `$(commands)` | Your prompts can now read your system |
-| ** Template Collections** | Organize prompts into groups | Work with focused sets of templates |
-| ** Multi-AI Support** | OpenRouter, OpenAI, Anthropic | When one AI is down, use another |
-| ** Safety First** | Allowlisted commands only | No `rm -rf /` accidents |
-| ** Auto-upgrade** | Self-updating tool | Future-you will thank present-you |
-| ** File Storage** | YAML/JSON prompts | Git-friendly templates |
-| ** Auto-complete** | Tab completion everywhere | Because typing is hard |
+| **🔄 Streaming by Default** | Real-time responses | See AI thinking in real-time |
+| **🐛 Debug Mode** | `--debug` shows internals | See generated prompts and command outputs |
+| **📁 Collections-Only Storage** | XML-based template organization | Everything is organized, no loose files |
+| **⚡ Dynamic Templates** | `{variables}` + `$(commands)` | Your prompts can now read your system |
+| **📚 Template Collections** | Organize prompts into groups | Work with focused sets of templates |
+| **🤖 Multi-AI Support** | OpenRouter, OpenAI, Anthropic | When one AI is down, use another |
+| **🔒 Safety First** | Allowlisted commands only | No `rm -rf /` accidents |
+| **🚀 Auto-upgrade** | Self-updating tool | Future-you will thank present-you |
+| **✅ Auto-complete** | Tab completion everywhere | Because typing is hard |
 
 ## Real-world examples (a.k.a. "Show me the money")
 
@@ -89,8 +91,8 @@ aix run roast --param language=python --param code="print('hello world')" --exec
 ```bash
 aix create commit "Write a commit message:\n\nChanges:\n$(git diff --staged)\n\nBe concise, follow conventional commits."
 
-# Then just run:
-aix run commit --enable-commands --execute
+# Then just run (commands enabled by default now!):
+aix run commit
 ```
 
 ### The "Explain this mess" prompt
@@ -98,8 +100,8 @@ aix run commit --enable-commands --execute
 ```bash
 aix create explain "Explain this {language} code like I'm 5:\n\n{code}\n\nFocus on:\n- What it does\n- Why it might exist\n- Potential improvements"
 
-# Usage:
-aix run explain --param language=python --param code="$(cat main.py)" --execute
+# Usage (streaming by default):
+aix run explain --param language=python --param code="$(cat main.py)"
 ```
 
 ### The "Roast my code" prompt
@@ -113,8 +115,8 @@ aix create roast "Roast this {language} code:\n\n{code}\n\nBe savage but helpful
 ```bash
 aix create sys-report "Generate a system status report:\n\n- Host: $(hostname)\n- User: $(whoami)\n- Uptime: $(uptime)\n- Disk: $(df -h /)\n- Memory: $(free -h)\n- Git status: $(git status --porcelain | wc -l) modified files\n\nMake it sound professional but slightly snarky."
 
-# Then:
-aix run sys-report --enable-commands --dry-run
+# Then (debug mode shows what commands were executed):
+aix run sys-report --debug --dry-run
 ```
 
 ## Documentation (a.k.a. "The boring but necessary stuff")
@@ -146,24 +148,30 @@ aix config --set editor nano  # or vim, or code, or butterfly
 
 ## Advanced Usage (a.k.a. "Look mom, I'm a hacker")
 
-### Streaming responses (for instant gratification)
+### Streaming responses (enabled by default now!)
 ```bash
-aix run my-prompt --stream --execute
+aix run my-prompt                    # Streaming on by default
+aix run my-prompt --no-stream        # Turn off streaming if needed
+```
+
+### Debug mode (see what's happening)
+```bash
+aix run my-prompt --debug            # Show generated prompts and command outputs
 ```
 
 ### Custom models (for the connoisseurs)
 ```bash
-aix run my-prompt --provider openai --model gpt-4 --execute
+aix run my-prompt --provider openai --model gpt-4
 ```
 
 ### Output to file (because copy-paste is so 2022)
 ```bash
-aix run my-prompt --output genius-idea.txt --execute
+aix run my-prompt --output genius-idea.txt
 ```
 
 ### Multiple parameters (the more the merrier)
 ```bash
-aix run complex-prompt --param lang=python --param style=pep8 --param complexity=overkill --execute
+aix run complex-prompt --param lang=python --param style=pep8 --param complexity=overkill
 ```
 
 ## Troubleshooting (a.k.a. "It doesn't work!")
@@ -174,7 +182,7 @@ aix run complex-prompt --param lang=python --param style=pep8 --param complexity
 |---------|----------|
 | `aix: command not found` | Try `python -m aix.cli --help` |
 | `No API key found` | Run `aix api-key openrouter` |
-| `Command not allowed` | Add `--enable-commands` to your run command |
+| `Command not allowed` | Commands are enabled by default, check security patterns |
 | `Upgrade failed` | Run `uv tool install aix --force --from git+https://github.com/bhadzhiev/AIeXporter.git` |
 | `It still doesn't work` | Have you tried turning it off and on again? |
 
@@ -277,4 +285,4 @@ Bonus points if your commit messages are generated by this tool.
 
 **Made with love by someone who got tired of copy-pasting prompts into ChatGPT**
 
-*Now stop reading and go automate something!*# Test change for commit template demo
+*Now stop reading and go automate something!*

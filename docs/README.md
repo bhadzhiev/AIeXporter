@@ -1,6 +1,6 @@
 # AIeXporter Documentation
 
-Welcome to the complete documentation for **AI eXecutor (aix)** - the comprehensive prompt management and execution tool.
+Welcome to the complete documentation for **AI eXecutor (aix)** - the comprehensive prompt management and execution tool with collections-only XML storage and streaming by default.
 
 ## 📚 Documentation Index
 
@@ -9,8 +9,8 @@ Welcome to the complete documentation for **AI eXecutor (aix)** - the comprehens
 - **[Usage Guide](USAGE.md)** - Basic usage and workflow
 
 ### Core Features  
-- **[Template Guide](TEMPLATES.md)** - Creating and managing prompt templates
-- **[Command Reference](COMMANDS.md)** - Complete CLI command reference
+- **[Template Guide](TEMPLATES.md)** - Creating and managing prompt templates with collections-only storage
+- **[Command Reference](COMMANDS.md)** - Complete CLI command reference with debug mode and streaming options
 - **[API Providers](API_PROVIDERS.md)** - Supported AI providers and configuration
 - **[Custom Providers](CUSTOM_PROVIDERS.md)** - Adding custom API providers and local models
 

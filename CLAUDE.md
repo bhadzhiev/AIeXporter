@@ -55,7 +55,8 @@ python -m aix.cli --help
 aix --help
 
 # Common usage
-aix run prompt-name --param key=value --execute
+aix run prompt-name --param key=value  # Streaming enabled by default
+aix run prompt-name --debug             # Show generated prompts and command outputs
 aix create prompt-name "template with {variables}"
 aix collection-create web-dev --template code-review
 ```

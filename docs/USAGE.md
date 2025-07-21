@@ -6,8 +6,8 @@
 # Create your first prompt
 aix create greet "Hello {name}! Welcome to $(hostname)"
 
-# Run it
-aix run greet --param name=World --execute
+# Run it (streaming enabled by default!)
+aix run greet --param name=World
 
 # List all prompts
 aix list
@@ -32,9 +32,9 @@ aix create git-summary "Summarize these git commits: $(git log --oneline -10)"
 # Create a prompt with dynamic system info
 aix create sys-info "Current system: $(uname -a). Disk usage: $(df -h | grep '^/')"
 
-# Run with parameters
-aix run git-summary --execute
-aix run sys-info --execute
+# Run with parameters (streaming by default)
+aix run git-summary
+aix run sys-info
 ```
 
 ### Command Execution Safety
@@ -42,11 +42,14 @@ aix run sys-info --execute
 Command execution is enabled by default but restricted by security patterns. Use `--disable-commands` to disable it:
 
 ```bash
-# Commands enabled by default
-aix run my-prompt --execute
+# Commands enabled by default, streaming enabled by default
+aix run my-prompt
 
 # Disable commands if needed
-aix run my-prompt --execute --disable-commands
+aix run my-prompt --disable-commands
+
+# Debug mode shows what commands were executed
+aix run my-prompt --debug
 ```
 
 ## Auto-Upgrade Magic
@@ -55,7 +58,7 @@ Never manually upgrade again:
 
 ```bash
 # One-time upgrade
-aix run my-prompt --auto-upgrade --execute
+aix run my-prompt --auto-upgrade
 
 # Always upgrade (set in config)
 aix config --set auto_upgrade true
@@ -65,8 +68,8 @@ aix config --set auto_upgrade true
 
 ```bash
 # Use specific provider
-aix run my-prompt --provider openai --execute
-aix run my-prompt --provider anthropic --execute
+aix run my-prompt --provider openai
+aix run my-prompt --provider anthropic
 
 # Set default provider
 aix config --set default_provider openai
@@ -74,19 +77,30 @@ aix config --set default_provider openai
 
 ## Streaming Responses
 
-For those who like watching paint dry:
+Streaming is now enabled by default! For those who like instant gratification:
 
 ```bash
-aix run my-prompt --stream --execute
+aix run my-prompt              # Streaming on by default
+aix run my-prompt --no-stream  # Turn off streaming if needed
+```
+
+## Debug Mode
+
+See what's happening under the hood:
+
+```bash
+aix run my-prompt --debug      # Shows generated prompts and command outputs
 ```
 
 ## Output to File
 
 ```bash
-aix run my-prompt --output response.txt --execute
+aix run my-prompt --output response.txt
 ```
 
 ## Collection Workflow
+
+**NEW**: aix now uses collections-only storage! All templates are automatically organized in XML collections. No more loose files - everything is structured and organized.
 
 Organize your templates into collections for better project management:
 
@@ -209,12 +223,12 @@ aix cmd template-test "Hello $(whoami)"
 
 ### Workflow Automation
 ```bash
-# Morning standup
-aix run standup --param project="MyApp" --execute
+# Morning standup (debug mode shows what data was collected)
+aix run standup --param project="MyApp" --debug
 
-# Code review workflow  
-aix run code-review --param file="src/main.py" --execute
+# Code review workflow (streaming by default)
+aix run code-review --param file="src/main.py"
 
 # Deploy checklist
-aix run deploy-check --param environment="staging" --execute
+aix run deploy-check --param environment="staging"
 ```

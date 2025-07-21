@@ -392,7 +392,7 @@ def run(
     model: Optional[str] = typer.Option(
         None, "--model", help="Model to use", autocompletion=complete_models
     ),
-    stream: bool = typer.Option(False, "--stream", help="Stream the response"),
+    stream: bool = typer.Option(True, "--stream/--no-stream", help="Stream the response (enabled by default)"),
     max_tokens: Optional[int] = typer.Option(
         None, "--max-tokens", help="Maximum tokens to generate"
     ),
@@ -407,6 +407,9 @@ def run(
     ),
     auto_upgrade: bool = typer.Option(
         False, "--auto-upgrade", help="Auto-upgrade aix before execution"
+    ),
+    debug: bool = typer.Option(
+        False, "--debug", help="Show debug information including generated prompts"
     ),
 ):
     """Run a prompt with parameter substitution and optional API execution."""
@@ -520,7 +523,7 @@ def run(
             param_dict, execute_commands=True, command_executor=executor, execute_generators=True
         )
 
-        if command_outputs:
+        if command_outputs and debug:
             console.print("Executed commands:", style="blue")
             for cmd_placeholder, cmd_output in command_outputs.items():
                 console.print(
@@ -552,9 +555,10 @@ def run(
     selected_provider = provider or config.get_default_provider()
     api_key = config.get_api_key(selected_provider)
 
-    # Always show the generated prompt before execution
-    console.print("Generated Prompt (before API execution):")
-    console.print(generated_prompt)
+    # Show the generated prompt only in debug mode
+    if debug:
+        console.print("Generated Prompt (before API execution):")
+        console.print(generated_prompt)
 
     if not api_key:
         console.print(

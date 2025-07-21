@@ -1,153 +1,199 @@
 # Template Guide
 
+**NEW**: aix now uses collections-only XML storage! All templates are automatically organized in collections with XML format. Templates are embedded within collection files for better organization and no loose files.
+
 ## Template Variables
 
 aix templates are like Mad Libs for AI. Fill in the blanks and watch the magic happen.
 
 ### Basic Variables
 
+**Note**: Examples below show the template structure. In the new collections-only system, templates are automatically embedded in XML collections, but you create them using the same `aix create` command.
 
-```yaml
-# prompt.yaml
-template: "Write a {genre} story about {character} who {action}"
-variables:
-  - genre
-  - character
-  - action
+```bash
+# Create template (automatically stored in collections)
+aix create story "Write a {genre} story about {character} who {action}"
 ```
 
 ```bash
-aix run story --param genre=sci-fi --param character="Captain Obvious" --param action="saves the day with common sense" --execute
+aix run story --param genre=sci-fi --param character="Captain Obvious" --param action="saves the day with common sense"
 ```
 
 ### Command Execution
 
 Want to include live system data? We've got you covered:
 
-```yaml
-# sys-report.yaml
-template: |
-  System Report for $(hostname)
-  
-  CPU: $(lscpu | grep 'Model name' | cut -d: -f2 | xargs)
-  Memory: $(free -h | grep '^Mem:' | awk '{print $2}')
-  Disk: $(df -h / | tail -1 | awk '{print $4}' | sed 's/G/ GB/')
-  
-  Current user: $(whoami)
-  Current directory: $(pwd)
-  Git status: $(git status --porcelain | wc -l) modified files
+```bash
+# Create template with commands (stored in XML collections automatically)
+aix create sys-report "System Report for \$(hostname)
+
+CPU: \$(lscpu | grep 'Model name' | cut -d: -f2 | xargs)
+Memory: \$(free -h | grep '^Mem:' | awk '{print \$2}')
+Disk: \$(df -h / | tail -1 | awk '{print \$4}' | sed 's/G/ GB/')
+
+Current user: \$(whoami)
+Current directory: \$(pwd)
+Git status: \$(git status --porcelain | wc -l) modified files"
+
+# Run with debug to see what commands were executed
+aix run sys-report --debug
 ```
 
 ### Advanced Command Syntax
 
-```yaml
-# git-ai.yaml
-template: |
-  Analyze these git changes and suggest a commit message:
-  
-  ```diff
-  {exec:git diff --cached}
-  ```
-  
-  Changes include {exec:git diff --cached --name-only | wc -l} files.
+```bash
+# Create template with explicit command syntax
+aix create git-ai "Analyze these git changes and suggest a commit message:
+
+\`\`\`diff
+{exec:git diff --cached}
+\`\`\`
+
+Changes include {exec:git diff --cached --name-only | wc -l} files."
+
+# Run with streaming (default) and debug mode
+aix run git-ai --debug
 ```
 
 ### Environment Variables
 
-```yaml
-# env-aware.yaml
-template: |
-  Hello {name}! You're running this on {exec:echo $OSTYPE}.
-  Your shell is {exec:echo $SHELL}.
-  The current time is {exec:date}.
+```bash
+# Create template with environment variables
+aix create env-aware "Hello {name}! You're running this on {exec:echo \$OSTYPE}.
+Your shell is {exec:echo \$SHELL}.
+The current time is {exec:date}."
+
+# Run with parameter
+aix run env-aware --param name="Developer"
 ```
 
 ### Multi-line Templates
 
-```yaml
-# code-review.yaml
-template: |
-  Review this code change:
-  
-  **File**: {filename}
-  **Language**: {language}
-  **Changes**:
-  ```{language}
-  {exec:git diff HEAD~1..HEAD -- {filename}}
-  ```
-  
-  Please provide:
-  1. Summary of changes
-  2. Potential issues
-  3. Suggestions for improvement
-variables:
-  - filename
-  - language
+```bash
+# Create multi-line template for code review
+aix create code-review "Review this code change:
+
+**File**: {filename}
+**Language**: {language}
+**Changes**:
+\`\`\`{language}
+{exec:git diff HEAD~1..HEAD -- {filename}}
+\`\`\`
+
+Please provide:
+1. Summary of changes
+2. Potential issues
+3. Suggestions for improvement"
+
+# Run the template
+aix run code-review --param filename="src/main.py" --param language="python"
+```
+
+## Collections-Only Storage
+
+All templates are now automatically stored in XML collections with embedded template content. This provides:
+
+- **Better Organization**: Templates are grouped in meaningful collections
+- **No Loose Files**: Everything is organized and structured
+- **XML Format**: Consistent storage with metadata preservation
+- **Default Collection**: Ungrouped templates go to a "default" collection automatically
+
+```bash
+# Create templates (automatically stored in default collection)
+aix create my-template "Hello {name}!"
+
+# Create collections for organization
+aix collection-create web-dev --description "Web development templates"
+
+# Add templates to specific collections
+aix collection-add my-template
+
+# Work within collection context
+aix collection-load web-dev
+aix list  # Shows only web-dev templates
 ```
 
 ## Template Best Practices
 
 ### 1. Make Variables Obvious
 
-```yaml
-# Good
-variables:
-  - project_name
-  - feature_description
+```bash
+# Good: Clear variable names
+aix create feature-request "Create a feature request for {project_name}: {feature_description}"
 
-# Bad
-variables:
-  - p
-  - d
+# Bad: Unclear variable names  
+aix create feature-request "Create a feature request for {p}: {d}"
 ```
 
-### 2. Use Default Values
+### 2. Use Debug Mode for Development
 
-```yaml
-# In your prompt file
-template: "Create a {type:-blog post} about {topic}"
+```bash
+# Use debug mode to see what's happening during template execution
+aix run my-template --debug --param topic="AI tools"
+
+# Debug mode shows:
+# - Generated prompt before API execution
+# - Command outputs that were executed
+# - Any placeholder generator results
 ```
 
 ### 3. Combine Variables and Commands
 
-```yaml
-# project-summary.yaml
-template: |
-  Project: {project_name}
-  
-  Files: {exec:find {project_path} -type f | wc -l}
-  Languages: {exec:find {project_path} -name '*.py' | wc -l} Python files
-  Last commit: {exec:cd {project_path} && git log -1 --pretty="%s"}
-variables:
-  - project_name
-  - project_path
+```bash
+# Create template combining variables and live system data
+aix create project-summary "Project {project_name} Summary:
+
+Project: {project_name}
+Files: {exec:find {project_path} -type f | wc -l}
+Git Status: {exec:cd {project_path} && git status --porcelain | wc -l} modified files
+Last Commit: {exec:cd {project_path} && git log -1 --pretty=%s}"
+
+# Run with both variables and commands
+aix run project-summary --param project_name="MyApp" --param project_path="/path/to/project"
 ```
 
 ## Template Storage
 
-Templates are stored as XML files in `~/.prompts/`:
+Templates are now stored embedded within XML collection files in `~/.prompts/collections/`. This provides better organization and no loose files.
 
 ```xml
-<!-- ~/.prompts/my-prompt.xml -->
+<!-- ~/.prompts/collections/default.xml -->
 <?xml version="1.0" encoding="utf-8"?>
-<template>
+<collection>
   <metadata>
-    <name>my-prompt</name>
-    <description>Optional description</description>
-    <variables>
-      <variable>var1</variable>
-      <variable>var2</variable>
-    </variables>
-    <tags>
-      <tag>productivity</tag>
-      <tag>development</tag>
-    </tags>
-    <created_at>2025-07-20T13:30:00.000000</created_at>
-    <updated_at>2025-07-20T13:30:00.000000</updated_at>
+    <name>default</name>
+    <description>Default collection for ungrouped templates</description>
+    <created_at>2025-07-21T12:00:00.000000</created_at>
+    <updated_at>2025-07-21T12:00:00.000000</updated_at>
   </metadata>
-  <content><![CDATA[Your template here with {var1} and {var2}]]></content>
-</template>
+  <templates>
+    <template>
+      <metadata>
+        <name>my-prompt</name>
+        <description>Optional description</description>
+        <variables>
+          <variable>var1</variable>
+          <variable>var2</variable>
+        </variables>
+        <tags>
+          <tag>productivity</tag>
+          <tag>development</tag>
+        </tags>
+        <created_at>2025-07-21T12:00:00.000000</created_at>
+        <updated_at>2025-07-21T12:00:00.000000</updated_at>
+      </metadata>
+      <content><![CDATA[Your template here with {var1} and {var2}]]></content>
+    </template>
+  </templates>
+</collection>
 ```
+
+### Storage Benefits
+
+- **Organized**: Templates grouped in meaningful collections
+- **XML Format**: Consistent structure with CDATA for content
+- **Embedded**: No separate content/metadata files
+- **Collections-Only**: Everything is organized, no loose files
 
 ## Dynamic Placeholder Generators
 
