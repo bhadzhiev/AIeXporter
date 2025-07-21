@@ -433,7 +433,7 @@ def get_client(
     
     # Check built-in providers first
     if provider == "openrouter":
-        return OpenAIClient(api_key, "https://openrouter.ai/api/v1")
+        return OpenRouterClient(api_key)
     elif provider == "openai":
         return OpenAIClient(api_key)
     elif provider == "anthropic":
