@@ -1,7 +1,5 @@
 import typer
 from rich.console import Console
-from rich.panel import Panel
-from rich.table import Table
 from typing import Optional
 from .executor import CommandExecutor
 from .security import DefaultSecurityValidator
@@ -54,7 +52,6 @@ def show_commands():
     config = Config()
     
     disabled_commands = config.get_disabled_commands()
-    security_validator = DefaultSecurityValidator(disabled_commands=disabled_commands or None)
     commands_enabled = config.get_commands_enabled()
 
     console.print("Command Execution Status", style="bold cyan")

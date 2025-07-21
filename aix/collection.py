@@ -80,8 +80,12 @@ class CollectionStorage:
     def save_collection(self, collection: Collection) -> bool:
         """Save a collection to XML format."""
         return self.save_collection_to_xml(collection)
+    
+    def save_collection_with_template(self, collection: Collection, new_template: 'PromptTemplate') -> bool:
+        """Save a collection to XML format with a new template to embed."""
+        return self.save_collection_to_xml(collection, new_template)
 
-    def save_collection_to_xml(self, collection: Collection) -> bool:
+    def save_collection_to_xml(self, collection: Collection, new_template: 'PromptTemplate' = None) -> bool:
         """Save a collection to a single XML file with embedded templates."""
         try:
             xml_path = self.collections_path / f"{collection.name}.xml"
@@ -112,8 +116,14 @@ class CollectionStorage:
             
             # Load and embed each template
             template_idx = 0
+            cdata_replacements = []
+            
             for template_name in collection.templates:
-                template = self._load_template_for_collection(template_name)
+                # Use new_template if it matches, otherwise load from collections
+                if new_template and new_template.name == template_name:
+                    template = new_template
+                else:
+                    template = self._load_template_for_collection(template_name)
                 if template:
                     template_elem = ET.SubElement(templates_elem, "template")
                     
@@ -124,43 +134,46 @@ class CollectionStorage:
                     ET.SubElement(tmpl_metadata, "created_at").text = template.created_at
                     ET.SubElement(tmpl_metadata, "updated_at").text = template.updated_at
                     
+                    # Add tags if present
+                    if template.tags:
+                        tags_elem = ET.SubElement(tmpl_metadata, "tags")
+                        for tag in template.tags:
+                            ET.SubElement(tags_elem, "tag").text = tag
+                    
+                    # Add variables if present
+                    if template.variables:
+                        variables_elem = ET.SubElement(tmpl_metadata, "variables")
+                        for var in template.variables:
+                            ET.SubElement(variables_elem, "variable").text = var
+                    
                     # Placeholder generators
                     if template.placeholder_generators:
                         generators_elem = ET.SubElement(tmpl_metadata, "placeholder_generators")
                         for gen_idx, generator in enumerate(template.placeholder_generators):
                             gen_elem = ET.SubElement(generators_elem, "placeholder_generator")
                             gen_elem.set("language", generator.language)
-                            gen_elem.text = f"PLACEHOLDER_GENERATOR_CDATA_{generator.language}_{template_idx}_{gen_idx}"
+                            placeholder = f"PLACEHOLDER_GENERATOR_CDATA_{generator.language}_{template_idx}_{gen_idx}"
+                            gen_elem.text = placeholder
+                            cdata_replacements.append((placeholder, f"<![CDATA[{generator.script}]]>"))
                     
                     # Template content with CDATA
                     content_elem = ET.SubElement(template_elem, "content")
-                    content_elem.text = "PLACEHOLDER_FOR_CDATA"
+                    content_placeholder = f"PLACEHOLDER_FOR_CDATA_{template_idx}"
+                    content_elem.text = content_placeholder
+                    cdata_replacements.append((content_placeholder, f"<![CDATA[{template.template}]]>"))
                     
                     template_idx += 1
             
             # Convert to string and replace placeholders with CDATA
+            ET.indent(root, space="  ", level=0)
             xml_string = ET.tostring(root, encoding="unicode")
             
             # Add XML declaration
             xml_string = '<?xml version="1.0" encoding="utf-8"?>\n' + xml_string
             
-            # Replace content placeholders with CDATA
-            template_idx = 0
-            for template_name in collection.templates:
-                template = self._load_template_for_collection(template_name)
-                if template:
-                    # Replace template content
-                    cdata_content = f"<![CDATA[{template.template}]]>"
-                    xml_string = xml_string.replace("PLACEHOLDER_FOR_CDATA", cdata_content, 1)
-                    
-                    # Replace placeholder generator CDATA sections
-                    if template.placeholder_generators:
-                        for gen_idx, generator in enumerate(template.placeholder_generators):
-                            placeholder = f"PLACEHOLDER_GENERATOR_CDATA_{generator.language}_{template_idx}_{gen_idx}"
-                            cdata_script = f"<![CDATA[{generator.script}]]>"
-                            xml_string = xml_string.replace(placeholder, cdata_script)
-                    
-                    template_idx += 1
+            # Replace all CDATA placeholders
+            for placeholder, cdata_content in cdata_replacements:
+                xml_string = xml_string.replace(placeholder, cdata_content)
             
             # Write to file
             with open(xml_path, "w", encoding="utf-8") as f:
@@ -172,20 +185,15 @@ class CollectionStorage:
             return False
 
     def _load_template_for_collection(self, template_name: str) -> Optional[PromptTemplate]:
-        """Load a template from storage for embedding in collection."""
-        # First try to load from prompt storage
-        storage = PromptStorage(self.storage_path)
-        template = storage.get_prompt(template_name)
-        if template:
-            return template
+        """Load a template from any collection for embedding in another collection."""
+        # Search all collections for the template
+        for collection_xml in self.collections_path.glob("*.xml"):
+            collection_name = collection_xml.stem
+            template = self.get_xml_collection_template(collection_name, template_name)
+            if template:
+                return template
         
-        # If not found, try to load from any collection directory
-        for collection_dir in self.collections_path.glob("*"):
-            if collection_dir.is_dir():
-                template_path = collection_dir / f"{template_name}.xml"
-                if template_path.exists():
-                    return storage.get_prompt(template_name, collection_dir.name)
-        
+        # If not found, return None - template will need to be created
         return None
 
     def get_collection(self, name: str) -> Optional[Collection]:
@@ -294,8 +302,47 @@ class CollectionStorage:
             collection = self.get_collection_from_xml(name)
             if collection:
                 collections.append(collection)
+        
+        # Also check for legacy directory-based collections and convert them
+        self._migrate_legacy_collections()
 
         return sorted(collections, key=lambda c: c.name)
+    
+    def _migrate_legacy_collections(self) -> None:
+        """Migrate any legacy directory-based collections to XML format."""
+        if not self.collections_path.exists():
+            return
+        
+        for collection_dir in self.collections_path.glob("*"):
+            if collection_dir.is_dir():
+                collection_name = collection_dir.name
+                xml_path = self.collections_path / f"{collection_name}.xml"
+                
+                # Skip if XML already exists
+                if xml_path.exists():
+                    continue
+                
+                # Create collection from directory
+                templates = []
+                for xml_file in collection_dir.glob("*.xml"):
+                    templates.append(xml_file.stem)
+                
+                if templates:
+                    from datetime import datetime
+                    collection = Collection(
+                        name=collection_name,
+                        description="Migrated from directory-based collection",
+                        templates=templates,
+                        created_at=datetime.now().isoformat(),
+                        updated_at=datetime.now().isoformat(),
+                    )
+                    
+                    # Save as XML collection
+                    if self.save_collection_to_xml(collection):
+                        print(f"Migrated collection '{collection_name}' to XML format")
+                        # Optionally remove the old directory after successful migration
+                        # import shutil
+                        # shutil.rmtree(collection_dir)
 
     def delete_collection(self, name: str) -> bool:
         """Delete a collection from XML storage."""
@@ -381,8 +428,20 @@ class CollectionStorage:
                                 "created_at": template_metadata.findtext("created_at", ""),
                                 "updated_at": template_metadata.findtext("updated_at", ""),
                                 "template": "",
+                                "tags": [],
+                                "variables": [],
                                 "placeholder_generators": []
                             }
+                            
+                            # Parse tags
+                            tags_elem = template_metadata.find("tags")
+                            if tags_elem is not None:
+                                template_data["tags"] = [tag.text for tag in tags_elem.findall("tag") if tag.text]
+                            
+                            # Parse variables
+                            variables_elem = template_metadata.find("variables")
+                            if variables_elem is not None:
+                                template_data["variables"] = [var.text for var in variables_elem.findall("variable") if var.text]
                             
                             # Parse placeholder generators
                             generators_elem = template_metadata.find("placeholder_generators")
@@ -419,30 +478,15 @@ class CollectionStorage:
 
         templates = []
         
-        # Check if this is an XML collection first
+        # Check if this is an XML collection
         xml_path = self.collections_path / f"{collection_name}.xml"
         if xml_path.exists():
-            # Load templates directly from XML
+            # Load templates directly from XML collection
             for template_name in collection.templates:
                 template = self.get_xml_collection_template(collection_name, template_name)
                 if template:
                     templates.append(template)
-        else:
-            # Use directory-based approach - scan collection directory for XML files
-            collection_dir = self.collections_path / collection_name
-            if collection_dir.exists() and collection_dir.is_dir():
-                for xml_file in collection_dir.glob("*.xml"):
-                    template_name = xml_file.stem
-                    template = storage.get_prompt(template_name, collection_name)
-                    if template:
-                        templates.append(template)
-            else:
-                # Fallback to templates list in collection
-                for template_name in collection.templates:
-                    template = storage.get_prompt(template_name)
-                    if template:
-                        templates.append(template)
-
+        
         return templates
 
     def validate_collection_templates(
@@ -517,12 +561,65 @@ class CollectionManager:
         )
 
         return self.collection_storage.save_collection(collection)
+    
+    def add_template_to_collection(self, collection_name: str, template: 'PromptTemplate') -> bool:
+        """Add a template to a collection."""
+        collection = self.collection_storage.get_collection(collection_name)
+        if not collection:
+            # Create collection if it doesn't exist
+            from datetime import datetime
+            collection = Collection(
+                name=collection_name,
+                description="",
+                templates=[],
+                created_at=datetime.now().isoformat(),
+                updated_at=datetime.now().isoformat()
+            )
+        
+        if collection.add_template(template.name):
+            from datetime import datetime
+            collection.updated_at = datetime.now().isoformat()
+            # Save with the template object for embedding
+            return self.collection_storage.save_collection_with_template(collection, template)
+        return False
+    
+    def remove_template_from_collection(self, collection_name: str, template_name: str) -> bool:
+        """Remove a template from a collection."""
+        collection = self.collection_storage.get_collection(collection_name)
+        if not collection:
+            return False
+        
+        if collection.remove_template(template_name):
+            from datetime import datetime
+            collection.updated_at = datetime.now().isoformat()
+            return self.collection_storage.save_collection(collection)
+        return False
+    
+    def get_template_collection(self, template_name: str) -> Optional[str]:
+        """Find which collection contains the given template."""
+        for collection_xml in self.collections_path.glob("*.xml"):
+            collection_name = collection_xml.stem
+            collection = self.collection_storage.get_collection(collection_name)
+            if collection and template_name in collection.templates:
+                return collection_name
+        return None
 
     def load_collection(self, name: str) -> bool:
         """Load a collection as the current working collection."""
         if self.collection_storage.collection_exists(name):
             return self.collection_storage.set_current_collection(name)
         return False
+    
+    def get_default_collection(self) -> str:
+        """Get the default collection name."""
+        from .storage import PromptStorage
+        return PromptStorage.DEFAULT_COLLECTION
+    
+    def ensure_collection_exists(self, name: str, description: str = "") -> bool:
+        """Ensure a collection exists, creating it if necessary."""
+        if not self.collection_storage.collection_exists(name):
+            return self.create_collection(name, description)
+        return True
 
     def get_current_collection_info(self) -> Optional[Dict[str, Any]]:
         """Get information about the current collection."""
@@ -604,7 +701,6 @@ class CollectionManager:
         import tarfile
         import tempfile
         import json
-        import shutil
         from datetime import datetime
 
         # Check if collection exists

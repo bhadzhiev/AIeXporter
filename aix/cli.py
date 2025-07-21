@@ -1515,13 +1515,13 @@ def provider_add(
         
         # Success message
         console.print(f"✅ [bold green]Provider '{name}' configured successfully![/bold green]")
-        console.print(f"\n[bold]Usage:[/bold]")
+        console.print("\n[bold]Usage:[/bold]")
         console.print(f"  aix run <prompt> --provider custom:{name}")
         
         if default_model:
             console.print(f"  aix run <prompt> --provider custom:{name} --model {default_model}")
         
-        console.print(f"\n[bold]Management:[/bold]")
+        console.print("\n[bold]Management:[/bold]")
         console.print(f"  aix provider info {name}    # View details")
         console.print(f"  aix provider remove {name}  # Remove provider")
         
@@ -1723,7 +1723,7 @@ def provider_quick_setup():
         
         # Success message
         console.print(f"✅ [bold green]Provider '{name}' configured successfully![/bold green]")
-        console.print(f"\n[bold]Usage:[/bold]")
+        console.print("\n[bold]Usage:[/bold]")
         console.print(f"  aix run <prompt> --provider custom:{name}")
         
         if default_model:

@@ -1,13 +1,10 @@
+
 """Placeholder generator execution engine for dynamic template placeholders."""
 
 import subprocess
 import tempfile
 import os
-import sys
-import json
-import re
-from typing import Dict, List, Optional, Any
-from dataclasses import dataclass
+from typing import Dict, List, Optional
 from .template import PlaceholderGenerator
 
 
@@ -127,7 +124,7 @@ class PlaceholderExecutor:
                     text=True,
                     timeout=self.timeout,
                     env=env,
-                    cwd='/tmp'  # Run in safe directory
+                    cwd=os.getcwd()  # Run in current working directory
                 )
                 
                 if result.returncode != 0:
@@ -190,7 +187,9 @@ def _create_restricted_subprocess():
             # Only allow specific safe commands
             allowed_commands = {
                 'ls', 'cat', 'head', 'tail', 'wc', 'grep', 'find', 'git',
-                'date', 'whoami', 'pwd', 'echo', 'which', 'file'
+                'date', 'whoami', 'pwd', 'echo', 'which', 'file', 'test',
+                'tr', 'sed', 'cut', 'du', 'sort', 'uniq', 'rev', 'awk',
+                'xargs', 'stat', 'basename', 'sh', 'bc'
             }
             
             if isinstance(args, (list, tuple)) and args:
@@ -204,7 +203,7 @@ def _create_restricted_subprocess():
             
             # Add security constraints
             kwargs.setdefault('timeout', 10)
-            kwargs.setdefault('cwd', '/tmp')
+            kwargs.setdefault('cwd', os.getcwd())
             
             return subprocess.run(args, **kwargs)
     

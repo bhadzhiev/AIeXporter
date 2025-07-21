@@ -125,11 +125,11 @@ class TestCollectionStorage:
         prompt_storage = PromptStorage(temp_storage_dir)
 
         # Create a collection
-        collection = Collection(name="template-collection", templates=["test-template"])
+        collection = Collection(name="template-collection", templates=[])
         success = collection_storage.save_collection(collection)
         assert success is True
 
-        # Add a template to the collection directory
+        # Add a template to the collection
         template = PromptTemplate("test-template", "Hello {name}")
         success = prompt_storage.save_prompt_xml(template, "template-collection")
         assert success is True
@@ -218,7 +218,7 @@ class TestCollectionStorage:
         collection = Collection(name="template-collection")
         collection_storage.save_collection(collection)
 
-        # Create prompts in the collection directory
+        # Create prompts and add to collection
         prompt1 = PromptTemplate("prompt1", "Template 1")
         prompt2 = PromptTemplate("prompt2", "Template 2")
         prompt_storage.save_prompt_xml(prompt1, "template-collection")
@@ -329,7 +329,7 @@ class TestCollectionManager:
         manager.create_collection("remove-test")
         manager.load_collection("remove-test")
 
-        # Create prompt in the collection directory
+        # Create prompt and add to collection
         prompt = PromptTemplate("remove-prompt", "Test template")
         manager.prompt_storage.save_prompt_xml(prompt, "remove-test")
 
@@ -337,8 +337,8 @@ class TestCollectionManager:
         collection = manager.collection_storage.get_collection("remove-test")
         assert "remove-prompt" in collection.templates
 
-        # Remove template (delete the XML file)
-        success = manager.prompt_storage.delete_prompt("remove-prompt", "remove-test")
+        # Remove template from collection
+        success = manager.remove_template_from_current_collection("remove-prompt")
         assert success is True
 
         # Verify template is no longer in collection

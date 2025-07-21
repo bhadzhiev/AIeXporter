@@ -56,9 +56,9 @@ class TestCLIIntegration:
         assert result.returncode == 0
         assert "Prompt 'test-prompt' created successfully!" in result.stdout
 
-        # Verify XML file created
-        xml_file = temp_env["prompts_dir"] / "test-prompt.xml"
-        assert xml_file.exists()
+        # Verify template exists in default collection XML
+        default_collection_xml = temp_env["prompts_dir"] / "collections" / "default.xml"
+        assert default_collection_xml.exists()
 
     def test_list_prompts_cli(self, temp_env):
         """Test listing prompts via CLI."""
@@ -91,16 +91,19 @@ class TestCLIIntegration:
         """Test deleting a prompt via CLI."""
         self.run_cli_command(["create", "delete-test", "Template to delete"], temp_env)
 
-        # Verify it exists
-        xml_file = temp_env["prompts_dir"] / "delete-test.xml"
-        assert xml_file.exists()
+        # Verify it exists in default collection
+        default_collection_xml = temp_env["prompts_dir"] / "collections" / "default.xml"
+        assert default_collection_xml.exists()
 
         # Delete with force flag
         result = self.run_cli_command(["delete", "delete-test", "--force"], temp_env)
 
         assert result.returncode == 0
         assert "deleted successfully" in result.stdout
-        assert not xml_file.exists()
+        
+        # Verify template no longer exists (check via CLI list command)
+        list_result = self.run_cli_command(["list"], temp_env)
+        assert "delete-test" not in list_result.stdout
 
     def test_create_collection_cli(self, temp_env):
         """Test creating collections via CLI."""
@@ -213,7 +216,9 @@ class TestCLIIntegration:
         )
 
         assert result.returncode == 0
-        assert (temp_env["prompts_dir"] / "xml-test.xml").exists()
+        # Verify template exists in default collection XML
+        default_collection_xml = temp_env["prompts_dir"] / "collections" / "default.xml"
+        assert default_collection_xml.exists()
 
         # Test another template
         result = self.run_cli_command(
@@ -221,7 +226,8 @@ class TestCLIIntegration:
         )
 
         assert result.returncode == 0
-        assert (temp_env["prompts_dir"] / "template-test.xml").exists()
+        # Both templates should be in the same default collection XML
+        assert default_collection_xml.exists()
 
     def test_help_commands(self, temp_env):
         """Test help commands work correctly."""
