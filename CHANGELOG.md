@@ -20,6 +20,18 @@
 
 - restructure configuration to store API keys in custom_providers
 
+## v (2025-07-21)
+
+### Fix
+
+- use built-in default models when custom provider config has null default_model
+
+## v0.21.0 (2025-07-21)
+
+### Feat
+
+- restructure configuration to store API keys in custom_providers
+
 ## v0.20.0 (2025-07-21)
 
 ### Feat
