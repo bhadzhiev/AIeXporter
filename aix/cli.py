@@ -624,9 +624,11 @@ def run(
             actual_provider = selected_provider[7:]
         
         custom_config = config.get_custom_provider(actual_provider)
-        if custom_config:
-            selected_model = model or custom_config.get("default_model", "")
+        if custom_config and custom_config.get("default_model"):
+            # Use custom provider's default model if specified
+            selected_model = model or custom_config.get("default_model")
         else:
+            # Use built-in defaults for all providers (including built-ins with empty custom configs)
             selected_model = model or config.get_default_model(selected_provider)
 
         # Prepare API parameters
