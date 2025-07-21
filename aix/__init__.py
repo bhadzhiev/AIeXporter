@@ -1,3 +1,3 @@
 """PromptConsole - A comprehensive prompt management and execution tool."""
 
-__version__ = "0.23.0"
+__version__ = "0.24.0"

@@ -1,41 +1,55 @@
- Quick Start Guide for aix on macOS
+# Quick Start Guide for aix on macOS
 
-  1. Install aix using uv
+## 1. Install aix using uv
 
-  First, install uv if you don't have it:
-  curl -LsSf https://astral.sh/uv/install.sh | sh
+First, install uv if you don't have it:
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
 
-  Then install aix:
-  uv tool install aix --from git+https://github.com/bhadzhiev/AIeXporter.git
+Then install aix:
+```bash
+uv tool install aix --from git+https://github.com/bhadzhiev/AIeXporter.git
+```
 
-  2. Set up OpenRouter API key
+## 2. Set up API provider
 
-  Get a free API key from https://openrouter.ai and configure it:
-  aix api-key openrouter
-  # Enter your API key when prompted
+**Option A: OpenRouter (requires credits but has many models)**
+```bash
+# Get API key from https://openrouter.ai
+aix api-key openrouter
+aix config --set default_provider=openrouter
+aix config --set custom_providers.openrouter.default_model="meta-llama/llama-3.2-3b-instruct"
+```
 
-  3. Set OpenRouter as default provider with model
+**Option B: OpenAI (paid but reliable)**  
+```bash
+# Get API key from https://platform.openai.com
+aix api-key openai
+aix config --set default_provider=openai
+```
 
-  aix config --set default_provider openrouter
-  aix provider add openrouter "https://openrouter.ai/api/v1" --model "microsoft/phi-3-mini-128k-instruct:free"
+**Option C: Anthropic (paid, high quality)**
+```bash
+# Get API key from https://console.anthropic.com
+aix api-key anthropic  
+aix config --set default_provider=anthropic
+```
 
-  4. Import collections from GitHub
+## 3. Import collections from GitHub
 
-  Add pre-built prompt collections:
-  aix collection-import-repo https://github.com/bhadzhiev/AIeXpoerterCollections.git
+Add pre-built prompt collections:
+```bash
+aix collection-import-repo https://github.com/bhadzhiev/AIeXpoerterCollections.git
+```
 
-  5. Run project analysis
+## 4. Run project analysis
 
-  Navigate to any project directory and run:
-  aix run project-info
+Navigate to any project directory and run:
+```bash
+aix run project-info
+```
 
-  Pro tip: Use aix list to see all available prompts from the imported collections.
+**Pro tip:** Use `aix list` to see all available prompts from the imported collections.
 
-  Popular OpenRouter free models:
-
-  - meta-llama/llama-3.2-3b-instruct:free
-  - meta-llama/llama-3.2-1b-instruct:free
-  - mistralai/mistral-7b-instruct:free
-  - microsoft/phi-3-mini-128k-instruct:free
-
-  This flow ensures users set up everything properly upfront, then can simply run commands without specifying providers/models each time.
+**Note:** While OpenRouter offers many models, free tier availability varies. For guaranteed availability, consider OpenAI or Anthropic with credits.

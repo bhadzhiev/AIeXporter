@@ -33,6 +33,19 @@
 - preserve built-in provider base URLs in add_custom_provider
 - use OpenRouterClient instead of OpenAIClient for openrouter provider
 
+## v (2025-07-21)
+
+### Feat
+
+- add comprehensive API error handling system
+
+## v0.23.0 (2025-07-21)
+
+### Fix
+
+- preserve built-in provider base URLs in add_custom_provider
+- use OpenRouterClient instead of OpenAIClient for openrouter provider
+
 ## v0.22.0 (2025-07-21)
 
 ### Fix
