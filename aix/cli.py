@@ -7,6 +7,7 @@ from pathlib import Path
 import os
 import subprocess
 import tempfile
+from datetime import datetime
 
 from .storage import PromptStorage
 from .template import PromptTemplate, TemplateSafeEncoder
@@ -18,8 +19,13 @@ from .commands.security import DefaultSecurityValidator
 from .collection import CollectionManager
 from .commands import test_cmd, show_commands, template_test
 from .exceptions import (
-    AIXError, APIError, AuthenticationError, InsufficientCreditsError,
-    ModelNotFoundError, RateLimitError, InvalidRequestError, ProviderError
+    APIError,
+    AuthenticationError,
+    InsufficientCreditsError,
+    ModelNotFoundError,
+    RateLimitError,
+    InvalidRequestError,
+    ProviderError,
 )
 from . import __version__
 from .completion import (
@@ -424,6 +430,11 @@ def run(
     debug: bool = typer.Option(
         False, "--debug", help="Show debug information including generated prompts"
     ),
+    weekly_report: Optional[str] = typer.Option(
+        None,
+        "--weekly-report",
+        help="Generate a weekly report using specified template and save to reports/",
+    ),
 ):
     """Run a prompt with parameter substitution and optional API execution."""
     storage = PromptStorage()
@@ -530,6 +541,10 @@ def run(
                 )
             return
 
+    # Handle weekly report option
+    if weekly_report:
+        return _handle_weekly_report(weekly_report, prompt, param_dict, config, console)
+
     # Generate the final prompt
     commands_enabled = config.get_commands_enabled() and not disable_commands
     if commands_enabled:
@@ -626,7 +641,7 @@ def run(
         actual_provider = selected_provider
         if selected_provider.startswith("custom:"):
             actual_provider = selected_provider[7:]
-        
+
         custom_config = config.get_custom_provider(actual_provider)
         if custom_config and custom_config.get("default_model"):
             # Use custom provider's default model if specified
@@ -690,36 +705,123 @@ def run(
     except AuthenticationError as e:
         console.print(f"❌ Authentication Error: {e.message}", style="red")
         console.print(f"💡 Try: aix api-key {e.provider}", style="yellow")
-        
+
     except InsufficientCreditsError as e:
         console.print(f"💳 Insufficient Credits: {e.message}", style="red")
-        console.print(f"💡 Add credits to your {e.provider} account or try a different provider", style="yellow")
-        
+        console.print(
+            f"💡 Add credits to your {e.provider} account or try a different provider",
+            style="yellow",
+        )
+
     except ModelNotFoundError as e:
         console.print(f"🤖 Model Error: {e.message}", style="red")
-        console.print(f"💡 Try: aix run {name} --model <different-model>", style="yellow")
+        console.print(
+            f"💡 Try: aix run {name} --model <different-model>", style="yellow"
+        )
         if e.provider == "openrouter":
             console.print("💡 Try free model: microsoft/mai-ds-r1:free", style="yellow")
-        
+
     except RateLimitError as e:
         console.print(f"⏰ Rate Limit: {e.message}", style="red")
         console.print("💡 Wait a moment and try again", style="yellow")
-        
+
     except InvalidRequestError as e:
         console.print(f"❌ Invalid Request: {e.message}", style="red")
         console.print("💡 Check your parameters and try again", style="yellow")
-        
+
     except ProviderError as e:
         console.print(f"🚫 Provider Error: {e.message}", style="red")
         console.print("💡 Try again later or use a different provider", style="yellow")
-        
+
     except APIError as e:
         console.print(f"🔌 API Error: {e.message}", style="red")
-        console.print(f"💡 Provider: {e.provider}, Status: {e.status_code}", style="yellow")
-        
+        console.print(
+            f"💡 Provider: {e.provider}, Status: {e.status_code}", style="yellow"
+        )
+
     except Exception as e:
         console.print(f"💥 Unexpected Error: {str(e)}", style="red")
         console.print("💡 This might be a bug. Please report it!", style="yellow")
+
+
+def _get_week_number(date: Optional[datetime] = None) -> int:
+    """Get the ISO week number for the given date (or current date)."""
+    if date is None:
+        date = datetime.now()
+    return date.isocalendar()[1]
+
+
+def _handle_weekly_report(
+    template_name: str,
+    prompt: PromptTemplate,
+    param_dict: dict,
+    config: "Config",
+    console,
+) -> None:
+    """Handle the weekly report generation."""
+    try:
+        # Create reports directory if it doesn't exist
+        reports_dir = Path.cwd() / "reports"
+        reports_dir.mkdir(exist_ok=True)
+
+        # Get current week number
+        current_week = _get_week_number()
+
+        # Generate filename: {template-name}-week-{weekNumber}.md
+        filename = f"{template_name}-week-{current_week}.md"
+        output_path = reports_dir / filename
+
+        # Check if file already exists
+        if output_path.exists():
+            overwrite = typer.confirm(
+                f"Report file {filename} already exists. Overwrite?"
+            )
+            if not overwrite:
+                console.print("Weekly report generation cancelled", style="yellow")
+                return
+
+        # Generate the report content
+        commands_enabled = config.get_commands_enabled()
+        if commands_enabled:
+            from .commands.security import DefaultSecurityValidator
+            from .commands.executor import CommandExecutor
+
+            disabled_commands = config.get_disabled_commands()
+            security_validator = DefaultSecurityValidator(
+                disabled_commands=disabled_commands or None
+            )
+            executor = CommandExecutor(security_validator=security_validator)
+            generated_content, _ = prompt.render(
+                param_dict,
+                execute_commands=True,
+                command_executor=executor,
+                execute_generators=True,
+            )
+        else:
+            generated_content, _ = prompt.render(
+                param_dict, execute_commands=False, execute_generators=True
+            )
+
+        # Add metadata header to the report
+        metadata = f"""---
+title: Weekly Report - Week {current_week}
+template: {template_name}
+date: {datetime.now().strftime("%Y-%m-%d")}
+week_number: {current_week}
+---
+
+"""
+
+        # Write the report
+        full_content = metadata + generated_content
+        output_path.write_text(full_content)
+
+        console.print(f"✅ Weekly report generated: {output_path}", style="green")
+        console.print(f"📊 Week number: {current_week}", style="cyan")
+        console.print(f"📝 Template: {template_name}", style="cyan")
+
+    except Exception as e:
+        console.print(f"❌ Error generating weekly report: {e}", style="red")
 
 
 @app.command()
@@ -1410,9 +1512,14 @@ def collection_import(
 
 @app.command("collection-import-repo")
 def collection_import_repo(
-    repo_url: str = typer.Argument(..., help="GitHub repository URL (e.g., https://github.com/user/repo.git)"),
+    repo_url: str = typer.Argument(
+        ..., help="GitHub repository URL (e.g., https://github.com/user/repo.git)"
+    ),
     collection_name: Optional[str] = typer.Option(
-        None, "--collection", "-c", help="Specific collection name to import (required if repo has multiple collections)"
+        None,
+        "--collection",
+        "-c",
+        help="Specific collection name to import (required if repo has multiple collections)",
     ),
     overwrite: bool = typer.Option(
         False, "--overwrite", help="Overwrite existing collection and templates"
@@ -1423,12 +1530,14 @@ def collection_import_repo(
     manager = CollectionManager()
 
     console.print(f"Importing collection from repository: {repo_url}", style="cyan")
-    
+
     if collection_name:
         console.print(f"Looking for collection: {collection_name}", style="dim")
-    
+
     try:
-        result = manager.import_collection_from_repo(repo_url, collection_name, overwrite)
+        result = manager.import_collection_from_repo(
+            repo_url, collection_name, overwrite
+        )
 
         if result["success"]:
             console.print(

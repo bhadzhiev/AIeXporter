@@ -45,7 +45,6 @@ class Config:
             print(f"Error loading config: {e}")
             return {}
 
-
     def _save_config(self, config: Dict[str, Any]) -> bool:
         """Save configuration to file."""
         try:
@@ -93,7 +92,6 @@ class Config:
         path_str = self.get("storage_path", str(Path.home() / ".prompts"))
         return Path(path_str)
 
-
     def get_api_key(self, provider: str) -> Optional[str]:
         """Get API key for a specific provider."""
         # Handle custom providers - check if API key is stored in custom_providers
@@ -111,7 +109,7 @@ class Config:
                 custom_config = custom_providers[provider]
                 if "api_key" in custom_config and custom_config["api_key"]:
                     return custom_config["api_key"]
-        
+
         return None
 
     def set_api_key(self, provider: str, api_key: str) -> bool:
@@ -130,7 +128,7 @@ class Config:
                     "default_model": None,
                     "headers": {},
                     "auth_type": "bearer",
-                    "api_key": api_key
+                    "api_key": api_key,
                 }
                 return self.set("custom_providers", custom_providers)
         else:
@@ -143,7 +141,7 @@ class Config:
                     "default_model": None,
                     "headers": {},
                     "auth_type": "bearer",
-                    "api_key": api_key
+                    "api_key": api_key,
                 }
             else:
                 custom_providers[provider]["api_key"] = api_key
@@ -177,14 +175,14 @@ class Config:
     ) -> bool:
         """Add a custom provider configuration."""
         custom_providers = self.get_custom_providers()
-        
+
         # For built-in providers, preserve their correct base URLs
         built_in_urls = {
             "openrouter": "https://openrouter.ai/api/v1",
-            "openai": "https://api.openai.com/v1", 
-            "anthropic": "https://api.anthropic.com"
+            "openai": "https://api.openai.com/v1",
+            "anthropic": "https://api.anthropic.com",
         }
-        
+
         # If this is a built-in provider and an empty base_url was provided, use the correct one
         if name in built_in_urls and not base_url:
             base_url = built_in_urls[name]

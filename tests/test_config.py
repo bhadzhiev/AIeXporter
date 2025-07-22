@@ -114,7 +114,6 @@ class TestConfig:
         assert isinstance(storage_path, Path)
         assert storage_path.exists()
 
-
     def test_get_default_model(self, temp_storage_dir):
         """Test getting default models for providers."""
         config = Config(temp_storage_dir / "config.json")

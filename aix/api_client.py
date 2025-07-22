@@ -73,7 +73,7 @@ class OpenRouterClient(BaseAPIClient):
         response = self.client.post(
             f"{self.base_url}/chat/completions", headers=headers, json=data
         )
-        
+
         if not response.is_success:
             raise parse_api_error(response, "openrouter")
 
@@ -429,13 +429,16 @@ class AnthropicClient(BaseAPIClient):
 
 
 def get_client(
-    provider: str, api_key: str, custom_config: Optional[Dict[str, Any]] = None, config=None
+    provider: str,
+    api_key: str,
+    custom_config: Optional[Dict[str, Any]] = None,
+    config=None,
 ) -> BaseAPIClient:
     """Factory function to get the appropriate API client."""
     # Handle legacy custom: prefix by stripping it
     if provider.startswith("custom:"):
         provider = provider[7:]  # Remove "custom:" prefix
-    
+
     # Check built-in providers first
     if provider == "openrouter":
         return OpenRouterClient(api_key)
@@ -443,7 +446,7 @@ def get_client(
         return OpenAIClient(api_key)
     elif provider == "anthropic":
         return AnthropicClient(api_key)
-    
+
     # If not built-in, check custom providers
     if custom_config:
         # Direct custom config provided
@@ -454,7 +457,7 @@ def get_client(
             provider_name=custom_config.get("name", provider),
             auth_type=custom_config.get("auth_type", "bearer"),
         )
-    
+
     # Try to get custom provider from config if config object provided
     if config:
         custom_provider_config = config.get_custom_provider(provider)
@@ -466,6 +469,8 @@ def get_client(
                 provider_name=provider,
                 auth_type=custom_provider_config.get("auth_type", "bearer"),
             )
-    
+
     # Provider not found anywhere
-    raise ValueError(f"Unsupported provider: {provider}. Available built-in providers: openrouter, openai, anthropic")
+    raise ValueError(
+        f"Unsupported provider: {provider}. Available built-in providers: openrouter, openai, anthropic"
+    )

@@ -167,20 +167,20 @@ class TestGetClient:
         """Test getting custom client without config raises error."""
         with pytest.raises(ValueError, match="Unsupported provider: custom"):
             get_client("custom", "test-key")
-    
+
     def test_get_custom_client_legacy_prefix(self):
         """Test backward compatibility with custom: prefix."""
         custom_config = {
             "base_url": "http://localhost:11434/v1",
             "headers": {"X-Custom": "test"},
             "name": "ollama",
-            "auth_type": "bearer"
+            "auth_type": "bearer",
         }
-        
+
         # Both should work the same
         client1 = get_client("custom:test", "test-key", custom_config)
         client2 = get_client("test", "test-key", custom_config)
-        
+
         assert isinstance(client1, CustomAPIClient)
         assert isinstance(client2, CustomAPIClient)
         assert client1.base_url == client2.base_url
