@@ -12,6 +12,7 @@ aix (AI eXecutor) is like having a really smart intern who lives in your termina
 - **Read your mind** (via prompts)
 - **Execute your commands** (safely!)
 - **Talk to AI gods** (OpenAI, Anthropic, OpenRouter)
+- **Generate weekly reports** (with the new --weekly-report flag!)
 - **Never asks for coffee breaks** (because it's code)
 
 ## Why should I care?
