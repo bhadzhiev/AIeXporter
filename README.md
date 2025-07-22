@@ -174,6 +174,15 @@ aix run my-prompt --provider openai --model gpt-4
 aix run my-prompt --output genius-idea.txt
 ```
 
+### Weekly reports (automated reporting)
+```bash
+# Generate weekly report with auto-generated filename
+aix run status-report --weekly-report
+
+# Creates: reports/status-report-week-30.md with metadata
+# Includes frontmatter with date, week number, and template info
+```
+
 ### Multiple parameters (the more the merrier)
 ```bash
 aix run complex-prompt --param lang=python --param style=pep8 --param complexity=overkill

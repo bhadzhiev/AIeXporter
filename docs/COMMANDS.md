@@ -28,6 +28,9 @@ aix run prompt-name --stream --execute
 # Save to file
 aix run prompt-name --output result.txt --execute
 
+# Generate weekly report with auto filename
+aix run status-report --weekly-report --execute
+
 # Command execution is enabled by default
 aix run prompt-name --execute
 

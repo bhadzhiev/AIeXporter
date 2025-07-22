@@ -541,9 +541,30 @@ def run(
                 )
             return
 
-    # Handle weekly report option
+    # Handle weekly report option - generate auto filename
     if weekly_report:
-        return _handle_weekly_report(name, prompt, param_dict, config, console)
+        # Create reports directory if it doesn't exist
+        reports_dir = Path.cwd() / "reports"
+        reports_dir.mkdir(exist_ok=True)
+        
+        # Get current week number
+        current_week = _get_week_number()
+        
+        # Generate filename: {template-name}-week-{weekNumber}.md
+        filename = f"{name}-week-{current_week}.md"
+        auto_output_path = reports_dir / filename
+        
+        # Check if file already exists
+        if auto_output_path.exists():
+            overwrite = typer.confirm(
+                f"Report file {filename} already exists. Overwrite?"
+            )
+            if not overwrite:
+                console.print("Weekly report generation cancelled", style="yellow")
+                return
+        
+        # Set the output path for normal flow
+        output = auto_output_path
 
     # Generate the final prompt
     commands_enabled = config.get_commands_enabled() and not disable_commands
@@ -583,8 +604,25 @@ def run(
         if output:
             if isinstance(output, str):
                 output = Path(output)
-            output.write_text(generated_prompt)
-            console.print(f"Generated prompt saved to {output}", style="green")
+            
+            # Add weekly report metadata if this was a weekly report
+            if weekly_report:
+                metadata = f"""---
+title: Weekly Report - Week {current_week}
+template: {name}
+date: {datetime.now().strftime("%Y-%m-%d")}
+week_number: {current_week}
+---
+
+"""
+                full_content = metadata + generated_prompt
+                output.write_text(full_content)
+                console.print(f"✅ Weekly report generated: {output}", style="green")
+                console.print(f"📊 Week number: {current_week}", style="cyan")
+                console.print(f"📝 Template: {name}", style="cyan")
+            else:
+                output.write_text(generated_prompt)
+                console.print(f"Generated prompt saved to {output}", style="green")
         else:
             console.print(
                 Panel(generated_prompt, title="Generated Prompt", expand=False)
@@ -694,8 +732,25 @@ def run(
         if output:
             if isinstance(output, str):
                 output = Path(output)
-            output.write_text(response_text)
-            console.print(f"\nResponse saved to {output}", style="green")
+            
+            # Add weekly report metadata if this was a weekly report
+            if weekly_report:
+                metadata = f"""---
+title: Weekly Report - Week {current_week}
+template: {name}
+date: {datetime.now().strftime("%Y-%m-%d")}
+week_number: {current_week}
+---
+
+"""
+                full_content = metadata + response_text
+                output.write_text(full_content)
+                console.print(f"\n✅ Weekly report generated: {output}", style="green")
+                console.print(f"📊 Week number: {current_week}", style="cyan")
+                console.print(f"📝 Template: {name}", style="cyan")
+            else:
+                output.write_text(response_text)
+                console.print(f"\nResponse saved to {output}", style="green")
         else:
             console.print("API Response:")
             console.print(response_text)
@@ -751,77 +806,6 @@ def _get_week_number(date: Optional[datetime] = None) -> int:
     return date.isocalendar()[1]
 
 
-def _handle_weekly_report(
-    template_name: str,
-    prompt: PromptTemplate,
-    param_dict: dict,
-    config: "Config",
-    console,
-) -> None:
-    """Handle the weekly report generation."""
-    try:
-        # Create reports directory if it doesn't exist
-        reports_dir = Path.cwd() / "reports"
-        reports_dir.mkdir(exist_ok=True)
-
-        # Get current week number
-        current_week = _get_week_number()
-
-        # Generate filename: {template-name}-week-{weekNumber}.md
-        filename = f"{template_name}-week-{current_week}.md"
-        output_path = reports_dir / filename
-
-        # Check if file already exists
-        if output_path.exists():
-            overwrite = typer.confirm(
-                f"Report file {filename} already exists. Overwrite?"
-            )
-            if not overwrite:
-                console.print("Weekly report generation cancelled", style="yellow")
-                return
-
-        # Generate the report content
-        commands_enabled = config.get_commands_enabled()
-        if commands_enabled:
-            from .commands.security import DefaultSecurityValidator
-            from .commands.executor import CommandExecutor
-
-            disabled_commands = config.get_disabled_commands()
-            security_validator = DefaultSecurityValidator(
-                disabled_commands=disabled_commands or None
-            )
-            executor = CommandExecutor(security_validator=security_validator)
-            generated_content, _ = prompt.render(
-                param_dict,
-                execute_commands=True,
-                command_executor=executor,
-                execute_generators=True,
-            )
-        else:
-            generated_content, _ = prompt.render(
-                param_dict, execute_commands=False, execute_generators=True
-            )
-
-        # Add metadata header to the report
-        metadata = f"""---
-title: Weekly Report - Week {current_week}
-template: {template_name}
-date: {datetime.now().strftime("%Y-%m-%d")}
-week_number: {current_week}
----
-
-"""
-
-        # Write the report
-        full_content = metadata + generated_content
-        output_path.write_text(full_content)
-
-        console.print(f"✅ Weekly report generated: {output_path}", style="green")
-        console.print(f"📊 Week number: {current_week}", style="cyan")
-        console.print(f"📝 Template: {template_name}", style="cyan")
-
-    except Exception as e:
-        console.print(f"❌ Error generating weekly report: {e}", style="red")
 
 
 @app.command()

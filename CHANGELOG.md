@@ -41,6 +41,12 @@
 
 ## v (2025-07-22)
 
+### Fix
+
+- fix --weekly-report option to save executed results with auto-generated filenames
+- remove unused _handle_weekly_report function
+- --weekly-report now works like --output but with automatic filename generation
+
 ### Feat
 
 - add --weekly-report option for automated report generation
