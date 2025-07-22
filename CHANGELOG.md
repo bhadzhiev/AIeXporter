@@ -55,6 +55,24 @@
 
 - update commitizen config for version 1.x releases
 
+## v2.0.1 (2025-07-22)
+
+### Fix
+
+- fix --weekly-report option to save executed results with auto-generated filenames
+- remove unused _handle_weekly_report function
+- --weekly-report now works like --output but with automatic filename generation
+
+## v2.0.0 (2025-07-22)
+
+### Feat
+
+- add --weekly-report option for automated report generation
+
+### Fix
+
+- update commitizen config for version 1.x releases
+
 ## v1.0.0 (2025-07-21)
 
 ### Feat
