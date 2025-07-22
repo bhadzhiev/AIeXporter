@@ -39,6 +39,28 @@
 
 - add comprehensive API error handling system
 
+## v (2025-07-22)
+
+### Feat
+
+- add --weekly-report option for automated report generation
+
+### Fix
+
+- update commitizen config for version 1.x releases
+
+## v1.0.0 (2025-07-21)
+
+### Feat
+
+- update to working OpenRouter free model microsoft/mai-ds-r1:free
+
+## v0.24.0 (2025-07-21)
+
+### Feat
+
+- add comprehensive API error handling system
+
 ## v0.23.0 (2025-07-21)
 
 ### Fix
