@@ -430,10 +430,10 @@ def run(
     debug: bool = typer.Option(
         False, "--debug", help="Show debug information including generated prompts"
     ),
-    weekly_report: Optional[str] = typer.Option(
-        None,
+    weekly_report: bool = typer.Option(
+        False,
         "--weekly-report",
-        help="Generate a weekly report using specified template and save to reports/",
+        help="Generate a weekly report using the current template and save to reports/",
     ),
 ):
     """Run a prompt with parameter substitution and optional API execution."""
@@ -543,7 +543,7 @@ def run(
 
     # Handle weekly report option
     if weekly_report:
-        return _handle_weekly_report(weekly_report, prompt, param_dict, config, console)
+        return _handle_weekly_report(name, prompt, param_dict, config, console)
 
     # Generate the final prompt
     commands_enabled = config.get_commands_enabled() and not disable_commands
